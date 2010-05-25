@@ -15,14 +15,14 @@
 *comment "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 *comment either express or implied.
 
-What kind of animal will you be?
+What kind of student will you be?
 *choice
-  #Lion
+  #Straight-A
     *goto claws
-  #Tiger
+  #Dropout
     *label claws
     In that case, you'll have powerful claws and a mighty roar!
     *finish
-  #Elephant
-    Well, elephants are interesting animals, too.
+  #Hipster
+    Well, hipsters are interesting animals, too.
     *finish

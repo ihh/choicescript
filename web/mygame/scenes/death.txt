@@ -15,6 +15,6 @@
 *comment "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 *comment either express or implied.
 
-You have died.
+You have graduated.
 
 *goto_scene ending

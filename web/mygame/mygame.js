@@ -23,8 +23,8 @@
 nav = new SceneNavigator([
     "startup"
     ,"animal"
-    ,"variables"
-    ,"ending"
+//    ,"variables"
+//    ,"ending"
     ,"death"
     
 ]);
