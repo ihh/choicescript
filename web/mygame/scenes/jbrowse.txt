@@ -49,9 +49,17 @@ It's May 2010.
   Your vacillation is so great that your Great Leader has his funding pulled. You are re-hired by a micromanaging obsessive, who directs your every move.
   *goto ending
 
-*if vacillation > 0
+*if vacillation > 80
+  You wake up, blink and yawn. Today is a beautiful day!
+  *goto feedback
+*elseif vacillation > 50
+  You wake up, blink and smile. Today is a beautiful day!
+  *goto feedback
+*elseif vacillation > 0
   You get out of bed, yawn, and stretch. Today is a beautiful day!
+  *goto feedback
 
+*label feedback
 *if output > 75
   You are really close! Don't give up now.
   *goto question
@@ -118,10 +126,10 @@ What will you do next on your full-time coding project?
          You are then distracted by a loud sound.
          *goto donewriting        
        *elseif vacillation > 0
-         Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading email.
+         Unfortunately, you then wander off to find a different cafe with wifi, and spend the rest of your day reading email.
          *goto donewriting        
        *else
-         Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
+         Despite your best intentions, you then leave to find another cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
          *goto donewriting
 
       *label donewriting
