@@ -52,6 +52,18 @@ It's May 2010.
 *if vacillation > 0
   You get out of bed, yawn, and stretch. Today is a beautiful day!
 
+*if output > 75
+  You are really close! Don't give up now.
+  *goto question
+*elseif output > 40
+  You are making real progress! What fun.
+  *goto question
+*elseif output > 20
+  You have made a good start. But there is more to do!
+  *goto question
+
+*label question
+
 What will you do next on your full-time coding project?
 *choice
   #Enter it into ${that} competition.
@@ -101,15 +113,17 @@ What will you do next on your full-time coding project?
       You go to a remote, secluded coffee shop and write ${paragraphs} paragraphs. Congratulations!
       *set paragraphs +2
       
-      *if vacillation > 30
-        You are then distracted by a loud sound.
-        *goto donewriting        
-      *elseif vacillation > 0
-        Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading email.
-        *goto donewriting        
-      *else
-        Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
-        *goto donewriting
+      *if output < 50
+       *if vacillation > 30
+         You are then distracted by a loud sound.
+         *goto donewriting        
+       *elseif vacillation > 0
+         Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading email.
+         *goto donewriting        
+       *else
+         Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
+         *goto donewriting
+
       *label donewriting
 
       *if output < 100
