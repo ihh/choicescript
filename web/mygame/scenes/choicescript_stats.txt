@@ -1,7 +1,5 @@
-This is a stats screen!
+What kind of coder are you!?
 
 *stat_chart
-  percent Leadership
-  percent Strength
-  text Leadership
-  text Strength
+  percent vacillation
+  percent output

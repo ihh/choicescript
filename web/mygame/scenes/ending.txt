@@ -15,10 +15,6 @@
 *comment "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 *comment either express or implied.
 
-This is the last scene!  The game is over!
-
-*page_break
-Please support our work by sharing this game with friends!  The more people play, the more
-resources we'll have to work on the next game.
+Dude, you graduated from Bay City High School. Or did you?
 
 *ending

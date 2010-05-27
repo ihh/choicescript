@@ -21,26 +21,26 @@
 // Specify the list of scenes here, separated by commas, with no final comma
 
 nav = new SceneNavigator([
+    "jbrowse"
+/*
     "startup"
     ,"animal"
-//    ,"variables"
-//    ,"ending"
     ,"death"
-    
+*/    
 ]);
 
 // Specify the default starting stats here
 
 stats = {
-    leadership: 50
-    ,strength: 50
+    vacillation: 50
+    ,output: 0
 };
 
 // Specify the stats to use in debug mode
 
 debugStats = {
-    leadership: 50
-    ,strength: 50
+    vacillation: 50
+    ,output: 0
 };
 
 // or just use defaults
