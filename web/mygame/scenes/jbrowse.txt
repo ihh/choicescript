@@ -13,6 +13,12 @@ It's May 2010.
 *temp some
 *set some "some much-needed"
 
+*temp that
+*set that "a"
+
+*temp refactoring
+*set refactoring 0
+
 *temp down
 *set down "down"
 
@@ -22,8 +28,15 @@ It's May 2010.
 *temp thelatest
 *set thelatest "the latest code I've been adding on a branch."
 
+*temp paragraphs
+*set paragraphs 2
+
+*temp min_boss_roll
+*set min_boss_roll 3
+
 *temp letmeask
 *temp wontstopme
+*temp die_roll
 
 *comment Main loop
 *label whatnext
@@ -33,27 +46,60 @@ It's May 2010.
   *goto ending
 
 *if vacillation > 100
-  Your vacillation is so great that your great leader has his funding pulled. You are re-hired by a micromanaging obsessive, who directs your every move.
+  Your vacillation is so great that your Great Leader has his funding pulled. You are re-hired by a micromanaging obsessive, who directs your every move.
   *goto ending
+
+*if vacillation > 0
+  You get out of bed, yawn, and stretch. Today is a beautiful day!
 
 What will you do next on your full-time coding project?
 *choice
-  #Enter it into a competition.
-    There's a conference coming up in Portland - iEvoBio. You know your great leader wants to enter JBrowse for the visualization challenge. You're supposed to work on the abstract. You can do that.
-    *set letmeask "Let me check in with Great Leader about the best way to proceed."
+  #Enter it into ${that} competition.
+    There's a conference coming up in Portland - iEvoBio. You know your Great Leader wants to enter JBrowse for the visualization challenge. You're supposed to work on the abstract. You can do that.
+    *set letmeask "Let me check in with our Great Leader about the best way to proceed."
     *set wontstopme "Little things like that won't stop me."
     *label writing
+    *set that "that"
     *choice
      #${letmeask} Like, what should I actually write?
-      Unfortunately, you cannot find Great Leader. He must be off somewhere.
-      *if vacillation > 0
-        Or maybe he's at work - it's not like you're there, so you wouldn't really know.
-      *set vacillation +30
+      How will you try to get hold of him?
+      *choice
+        #Try his office.
+          *if vacillation > 0
+            Yeah, maybe he's at work - it's not like you're there today, so you wouldn't really know. Oops.
+            *set vacillation +30
+            *goto boss
+          *rand die_roll 1 6
+          *if die_roll >= min_boss_roll
+             He is in today. What luck! You have a productive discussion that results in you actually writing something together.
+             *set output +30
+             *set min_boss_roll +2
+             *goto boss
+          *else
+             Unfortunately, you cannot find your Great Leader. He must be off somewhere. You leave a note instead.
+             *set min_boss_roll -1
+             *goto boss
+        #Email him.
+          His response is relatively quick and not totally useless. This allows you to get some work done by the end of the day.
+          *set vacillation +10
+          *set output +10
+          *set min_boss_roll -1
+          *goto boss
+        #Call his cellphone.
+          After a few rounds of telephone tag you get through to him and straighten things out.
+
+          You grab a late lunch, then write a few lines. That's something, right?
+          *set vacillation +10
+          *set output +10
+          *set min_boss_roll -1
+          *goto boss
+      *label boss
       *page_break
       *goto whatnext
      #${wontstopme} Let's just go somewhere to focus and write.
       *set output +40
-      Congratulations. You go to a cafe and write two paragraphs.
+      You go to a remote, secluded coffee shop and write ${paragraphs} paragraphs. Congratulations!
+      *set paragraphs +2
       
       *if vacillation > 30
         You are then distracted by a loud sound.
@@ -63,44 +109,84 @@ What will you do next on your full-time coding project?
         *goto donewriting        
       *else
         Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
-        *goto donewriting        
+        *goto donewriting
       *label donewriting
+
+      *if output < 100
+        At least you did something. The next morning, you get up early and go straight in to the office.
+      *set vacillation 0
       *page_break
       *goto whatnext
     *finish
-  #Write a journal article about it.
+  #Write ${that} journal article about it.
     There's a Current Protocols article due in June. You can start writing something on that.
-    *set letmeask "I know our leader has some pretty good ideas about this."
+    *set letmeask "I know our Great Leader has some pretty good ideas about this."
     *set wontstopme "There's no time to waste stalling."
     *goto writing
   #Help apply it to a big project.
-    The modENCODE browser is a pretty high-profile project. You can help with that.
+    You could help JBrowse be used in some big science kind of project. But what?
+    *fake_choice
+      #Pathogen research portal
+        The PATRIC BRC browser seems like a pretty important project. You can help with that.
+      #Drosophila browser
+        The modENCODE browser is a pretty high-profile project. You can help with that.
+      #HIV database
+        How cool is it that you get to help find a cure for HIV?
 
     You spend a productive few days and nights trawling through data issues and writing illuminating posts to mailing lists. Of course, there is always more to do...
-    *set output +1
-    *set vacillation +20
+    *set output +2
+    *set vacillation +10
     *page_break
     *goto whatnext
   #Start ${some} refactoring.
+    *set refactoring +1
     *set some "the next round of"
     *goto coding
   #Fix ${thelatest}
     You decide to polish ${code}
-    *set code "the code on your dev branch. It sure does need it..."
+    *set code "the code on your dev branch."
+    How do you approach this?
+    *fake_choice
+      #Add some automated tests.
+      #Look for relevant bug reports.
+      #Follow your instincts.
+    A wise strategy.
     *set thelatest "some issues that were reported this week."
     *goto coding
   #Work my way ${down} the feature list.
+    *if refactoring = 0
+      You probably need to do some refactoring before you add any new features. You mull on this for the rest of the day.
+      *set vacillation +5
+      *page_break
+      *goto whatnext
+    *set refactoring -1
+    What features do you want to concentrate on?
+    *fake_choice
+      #Back-end server code.
+        You add several significant new command-line features to the JBrowse engine.
+      #Client-side enhancements, with an emphasis on new features.
+        The bells chime. The whistles trill. Your code gleams, to rapturous acclaim.
+      #Client-side enhancements, with an emphasis on stability and robustness.
+        The JBrowse reputation - that it "simply works" - doesn't just happen. You code is bulletproof because you work for it.
     *set thelatest "some of the features you just added."
+    *set code "the new features."
     *set down "further down"
     *set some "some prudent"
     *label coding
     You spend a productive few days and nights coding.
-    *set output +1
+    *set output +2
     *set vacillation +10
     *page_break
     *goto whatnext
+  #Go into the office and work from there.
+    *if vacillation = 0
+      Silly! You're already at the office. You go there every day. Right?
+      *goto whatnext
+    OK, so you're at work. You feel extremely virtuous.
+    *set vacillation 0
+    *goto whatnext
   #Think ${howmuchthought} more carefully about what to do next.
-    You think, but it doesn't seem to do any good.
+    You think very hard, all day, but it still feels like there is a lot of thinking left to do.
     *set some "some urgent"
     *set vacillation +40
     *set howmuchthought "a LOT"
