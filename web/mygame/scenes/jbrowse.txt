@@ -1,0 +1,115 @@
+It's May 2010.
+
+
+*create vacillation
+*set vacillation 0
+
+*create output
+*set output 0
+
+*temp howmuchthought
+*set howmuchthought "a little"
+
+*temp some
+*set some "some much-needed"
+
+*temp down
+*set down "down"
+
+*temp code
+*set code "the BAM demo."
+
+*temp thelatest
+*set thelatest "the latest code I've been adding on a branch."
+
+*temp letmeask
+*temp wontstopme
+
+*comment Main loop
+*label whatnext
+
+*if output > 100
+  Congratulations! You finished writing something that is actually intended to be read by humans!
+  *goto ending
+
+*if vacillation > 100
+  Your vacillation is so great that your great leader has his funding pulled. You are re-hired by a micromanaging obsessive, who directs your every move.
+  *goto ending
+
+What will you do next on your full-time coding project?
+*choice
+  #Enter it into a competition.
+    There's a conference coming up in Portland - iEvoBio. You know your great leader wants to enter JBrowse for the visualization challenge. You're supposed to work on the abstract. You can do that.
+    *set letmeask "Let me check in with Great Leader about the best way to proceed."
+    *set wontstopme "Little things like that won't stop me."
+    *label writing
+    *choice
+     #${letmeask} Like, what should I actually write?
+      Unfortunately, you cannot find Great Leader. He must be off somewhere.
+      *if vacillation > 0
+        Or maybe he's at work - it's not like you're there, so you wouldn't really know.
+      *set vacillation +30
+      *page_break
+      *goto whatnext
+     #${wontstopme} Let's just go somewhere to focus and write.
+      *set output +40
+      Congratulations. You go to a cafe and write two paragraphs.
+      
+      *if vacillation > 30
+        You are then distracted by a loud sound.
+        *goto donewriting        
+      *elseif vacillation > 0
+        Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading email.
+        *goto donewriting        
+      *else
+        Unfortunately, you then leave to find a cafe with wifi, and spend the rest of your day reading technical white papers that are (at best) distantly related to your project.
+        *goto donewriting        
+      *label donewriting
+      *page_break
+      *goto whatnext
+    *finish
+  #Write a journal article about it.
+    There's a Current Protocols article due in June. You can start writing something on that.
+    *set letmeask "I know our leader has some pretty good ideas about this."
+    *set wontstopme "There's no time to waste stalling."
+    *goto writing
+  #Help apply it to a big project.
+    The modENCODE browser is a pretty high-profile project. You can help with that.
+
+    You spend a productive few days and nights trawling through data issues and writing illuminating posts to mailing lists. Of course, there is always more to do...
+    *set output +1
+    *set vacillation +20
+    *page_break
+    *goto whatnext
+  #Start ${some} refactoring.
+    *set some "the next round of"
+    *goto coding
+  #Fix ${thelatest}
+    You decide to polish ${code}
+    *set code "the code on your dev branch. It sure does need it..."
+    *set thelatest "some issues that were reported this week."
+    *goto coding
+  #Work my way ${down} the feature list.
+    *set thelatest "some of the features you just added."
+    *set down "further down"
+    *set some "some prudent"
+    *label coding
+    You spend a productive few days and nights coding.
+    *set output +1
+    *set vacillation +10
+    *page_break
+    *goto whatnext
+  #Think ${howmuchthought} more carefully about what to do next.
+    You think, but it doesn't seem to do any good.
+    *set some "some urgent"
+    *set vacillation +40
+    *set howmuchthought "a LOT"
+    *page_break
+    *goto whatnext
+*finish
+
+*label ending
+
+You have staved off the axe of unemployment for another day.
+*ending
+
