@@ -203,7 +203,7 @@ What will you do next on your full-time coding project?
   #Go into the office and work from there.
     *if vacillation = 0
       Silly! You're already at the office. You go there every day. Right?
-      *goto whatnext
+      *goto question
     OK, so you're at work. You feel extremely virtuous.
     *set vacillation 0
     *goto whatnext
