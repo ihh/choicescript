@@ -145,7 +145,7 @@ h2 {
   }
   
   #share {
-    font-size: small;
+    font-size: smaller;
   }
   
   #share span:first-child {
@@ -153,7 +153,8 @@ h2 {
   }
   
   #stats {
-    font-size: small;
+    font-size: smaller;
+    width: 90%;
   }
   
   .gameTitle {
@@ -164,8 +165,16 @@ h2 {
     margin: -8px;
   }
   
+  .mobileBadges {
+    float: none;
+  }
+  
   #header {
     margin-top: 30px;
+  }
+  
+  #header p {
+    margin: 0;
   }
 
 }
