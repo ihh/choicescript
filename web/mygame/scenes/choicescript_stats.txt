@@ -1,5 +1,0 @@
-Your vital signs:
-
-*stat_chart
-  percent vacillation
-  percent output
