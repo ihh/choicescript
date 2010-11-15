@@ -6,7 +6,8 @@ if (grep (/^-h/, @ARGV)) {
 	"\nUsage: $0 <dot file>\n\n",
 	"Converts graphviz dot-format files into ChoiceScript stubs.\n\n",
 	"Currently a bit picky about the input format (one edge per line is safest).\n",
-	"Probably best to to filter input through 'dot -Tdot' to clean it up.\n\n",
+	"Probably best to to filter input through 'dot -Tdot' to clean it up\n",
+	"(although this program may then get confused about the ordering of nodes)\n\n",
 	"Use 'label' node/edge attributes for narrative text,\n",
 	"and 'tooltip' edge attribute for choice text.\n\n";
 }
