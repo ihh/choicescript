@@ -19,8 +19,8 @@ grep (chomp, @dot);
 # parse file
 my $nameRegex = '[A-Za-z_][A-Za-z_\d]*';
 my $nameListRegex = '[A-Za-z0-9_\s]+?';
-my $transRegex = '^\s*('.$nameRegex.'?)\s*\->\s*('.$nameRegex.')\s*(.*?)\s*;?\s*$';
-my $multiRegex = '^\s*('.$nameRegex.'?)\s*\->\s*\{\s*('.$nameListRegex.')\s*\}\s*(.*?)\s*;?\s*$';
+my $multiNameRegex = '('.$nameRegex.'|\{\s*'.$nameListRegex.'\s*\})';
+my $transRegex = '^\s*'.$multiNameRegex.'\s*\->\s*'.$multiNameRegex.'\s*(.*?)\s*;?\s*$';
 my $nodeRegex = '^\s*('.$nameRegex.')\s*(.*?)\s*;?\s*$';
 my $keywordRegex = '^\s*(node|edge|graph|digraph)\b';
 my $assignRegex = '^\s*'.$nameRegex.'\s*=';
@@ -29,7 +29,6 @@ my $assignRegex = '^\s*'.$nameRegex.'\s*=';
 my @lines = grep ($dot[$_] !~ /$keywordRegex/
 		  && $dot[$_] !~ /$assignRegex/
 		  && ($dot[$_] =~ /$transRegex/
-		      || $dot[$_] =~ /$multiRegex/
 		      || $dot[$_] =~ /$nodeRegex/),
 		  0..$#dot);
 
@@ -37,24 +36,32 @@ my @lines = grep ($dot[$_] !~ /$keywordRegex/
 my @trans;
 for my $src_dest_attr_lnum (map ($dot[$_] =~ /$transRegex/ ? [$1,$2,$3,$_] : () , @lines)) {
     my ($src, $dest, $attr, $lnum) = @$src_dest_attr_lnum;
-    my @dest;
+    my $nTrans = asList($src) + 0;
+    my @destExpr;
     while (1) {
-	push @dest, $dest;
+	push @destExpr, $dest;
+	$nTrans *= asList($dest) + 0;
 	last unless "$dest $attr" =~ /$transRegex/;  # unpack chains like a->b->c->d
 	($dest, $attr) = ($2, $3);
     }
-    for my $d (@dest) { push @trans, [$src,$d,$attr,$lnum]; $src = $d; $lnum += 1/@dest; }
-}
-
-# unpack multiple transitions like a->{b c}
-for my $src_dest_attr_lnum (map ($dot[$_] =~ /$multiRegex/ ? [$1,$2,$3,$_] : () , @lines)) {
-    my ($src, $dests, $attr, $lnum) = @$src_dest_attr_lnum;
-    my @dest = split /\s+/, $dests;
-    for my $dest (@dest) { push @trans, [$src,$dest,$attr,$lnum]; $lnum += 1/@dest }
+    my $srcExpr = $src;
+    for my $destIndex (0..$#destExpr) {
+	my $destExpr = $destExpr[$destIndex];
+	my $edgeAttr = $destIndex == $#destExpr ? $attr : "";
+	my @s = asList($srcExpr);
+	my @d = asList($destExpr);
+	for my $s (@s) {
+	    for my $d (@d) {
+		push @trans, [$s,$d,$edgeAttr,$lnum];
+		$lnum += 1/$nTrans;
+	    }
+	}
+	$srcExpr = $destExpr;
+    }
 }
 
 # nodes
-my @node_lines = grep ($dot[$_] !~ /$transRegex/ && $dot[$_] !~ /$multiRegex/, @lines);
+my @node_lines = grep ($dot[$_] !~ /$transRegex/, @lines);
 my %node_attr = map ($dot[$_] =~ /$nodeRegex/ ? ($1=>$2) : (), @node_lines);
 for my $src_dest (@trans) {
     my ($src, $dest) = @$src_dest;
@@ -142,4 +149,11 @@ sub getAttr {
     elsif ($attrText =~ /\b$attr\s*=\s*([^\s,]+)/) { $val = $1 }
     $val =~ s/\\n/\n/g;
     return $val;
+}
+
+# subroutine to convert a state name, or brace-enclosed list of state names, into a list
+sub asList {
+    my ($dotExpr) = @_;
+    $dotExpr =~ s/^\s*\{\s*(.*?)\s*\}\s*$/$1/;
+    return split /\s+/, $dotExpr;
 }

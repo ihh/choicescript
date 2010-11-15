@@ -1,0 +1,90 @@
+*comment gepetto_the_toymaker_made_a;
+*label gepetto_the_toymaker_made_a
+Currently: gepetto_the_toymaker_made_a.
+*choice
+  *comment gepetto_the_toymaker_made_a -> boy;   // line 2
+  #boy
+    You choose boy.
+    *page_break
+    *goto boy
+  
+  *comment gepetto_the_toymaker_made_a -> giant_robot;   // line 2
+  #giant_robot
+    You choose giant_robot.
+    *page_break
+    *goto giant_robot
+  
+
+*comment giant_robot;
+*label giant_robot
+Currently: giant_robot.
+*choice
+  *comment giant_robot -> killed_a_man;   // line 5
+  #killed_a_man
+    You choose killed_a_man.
+    *page_break
+    *goto killed_a_man
+  
+  *comment giant_robot -> killed_gepetto;   // line 5
+  #killed_gepetto
+    You choose killed_gepetto.
+    *page_break
+    *goto killed_gepetto
+  
+
+*comment alone;
+*label alone
+Currently: alone.
+*goto next_scene
+
+*comment killed_a_man;
+*label killed_a_man
+Currently: killed_a_man.
+*line_break
+*comment killed_a_man -> alone;
+You choose alone.
+*page_break
+*goto alone
+
+*comment boy;
+*label boy
+Currently: boy.
+*choice
+  *comment boy -> ran_away;   // line 3
+  #ran_away
+    You choose ran_away.
+    *page_break
+    *goto ran_away
+  
+  *comment boy -> gepetto_died;   // line 4
+  #stay with Gepetto
+    You choose gepetto_died.
+    *page_break
+    *goto gepetto_died
+  
+
+*comment gepetto_died;
+*label gepetto_died
+Currently: gepetto_died.
+*goto next_scene
+
+*comment ran_away;
+*label ran_away
+Currently: ran_away.
+*line_break
+*comment ran_away -> alone;
+You choose alone.
+*page_break
+*goto alone
+
+*comment killed_gepetto;
+*label killed_gepetto
+Currently: killed_gepetto.
+*line_break
+*comment killed_gepetto -> alone;
+You choose alone.
+*page_break
+*goto alone
+
+*label next_scene
+*finish
