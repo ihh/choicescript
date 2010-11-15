@@ -4,7 +4,9 @@
 if (grep (/^-h/, @ARGV)) {
     die
 	"\nUsage: $0 <dot file>\n\n",
-	"Converts graphviz dot-format files into ChoiceScript stubs.\n",
+	"Converts graphviz dot-format files into ChoiceScript stubs.\n\n",
+	"Currently a bit picky about the input format (max one edge per line, etc.)\n",
+	"Probably best to to filter input through 'dot -Tdot' to clean it up.\n\n",
 	"Use 'label' node/edge attributes for narrative text,\n",
 	"and 'tooltip' edge attribute for choice text.\n\n";
 }
@@ -14,9 +16,10 @@ my @dot = <>;
 grep (chomp, @dot);
 
 # parse file
-my $transRegex = '^\s*(\S+?)\s*\->\s*([^\s\[\-;]+)\s*(.*?)\s*;?\s*$';
-my $nodeRegex = '^\s*([^\s\[;]+)\s*(.*?)\s*;?\s*$';
-my @lines = grep (/$transRegex/ || (!/^\s*(node|edge|graph|digraph)\s+/ && !/^\s*\S*?[=\{\}]/), @dot);
+my $nameCharRegex = '[A-Za-z0-9_]';
+my $transRegex = '^\s*('.$nameCharRegex.'+?)\s*\->\s*('.$nameCharRegex.'+)\s*(.*?)\s*;?\s*$';
+my $nodeRegex = '^\s*('.$nameCharRegex.'+)\s*(.*?)\s*;?\s*$';
+my @lines = grep (/$transRegex/ || (!/^\s*(node|edge|graph|digraph)\s+/ && !/^\s*\S*?[=\{\}\/\*]/), @dot);
 
 my @trans = map (/$transRegex/ ? [$1,$2,$3] : () , @lines);
 my %node_attr = (map (/$nodeRegex/ ? ($1=>$2) : (),
