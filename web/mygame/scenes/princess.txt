@@ -54,7 +54,7 @@ The ${prinz}
         *goto Rescue
     #blew the smoke away
         The warm breath of the ${prinz} only seemed to feed whatever magic fueled the crows' materialization into physical form.
-        One now shimmered to solidity right in front of ${prinzer}.
+        One ghost-crow now shimmered to solidity right in front of ${prinzer}.
         As the unnaturally large black crow hung in front of ${prinzes} face,
         beak and lips touched momentarily in an unnatural kiss.
         *goto KissCrow
