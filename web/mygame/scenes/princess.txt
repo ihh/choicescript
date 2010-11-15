@@ -67,7 +67,7 @@ The royal captive was both grateful and, according to the custom of the time,
 *choice
  #appealing to the ${prinz}. They were married one year later, to the day.
   *goto Wedding
- #appealing, but not as appealing as their sister. The ${prinz} married her instead.
+ #appealing, but not quite as appealing as the younger sister. The ${prinz} married her instead.
   *goto Wedding
  #appealing, indeed, as was the sister, but neither was appealing as their youngest brother. The ${prinz} married him instead.
   *goto Wedding
