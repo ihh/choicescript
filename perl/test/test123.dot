@@ -1,3 +1,8 @@
+
+/* An example graph from the 'dot' manpage. */
+/* A tooltip has been added to the a->z transition. */
+/* Ian Holmes, 11/15/2010 */
+
 digraph test123 {
                a -> b -> c;
                a -> {x y};
