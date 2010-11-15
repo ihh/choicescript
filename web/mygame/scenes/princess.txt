@@ -89,7 +89,7 @@ The wedding was the social event of the decade.
   *finish
 
 *label KissCrow
-An unearthly chime sounded and the world was still.
+An chime sounded, as if from far away, and the world was still.
 *choice
     #When its beak touched the lips of the ${prinz}, the crow became human
        And so it was: the ${prinz} saw that the crow was the ghost of ${prinzes} true love, returned from death by questionable magic.
