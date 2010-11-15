@@ -23,7 +23,6 @@ my $multiRegex = '^\s*('.$nameRegex.'?)\s*\->\s*\{\s*('.$nameListRegex.')\s*\}\s
 my $nodeRegex = '^\s*('.$nameRegex.')\s*(.*?)\s*;?\s*$';
 my $keywordRegex = '^\s*(node|edge|graph|digraph)\b';
 my $assignRegex = '^\s*'.$nameRegex.'\s*=';
-my $braceRegex = '^\s*[\{\}\[\]]';
 
 # get all relevant lines from file
 my @lines = grep ($dot[$_] !~ /$keywordRegex/
