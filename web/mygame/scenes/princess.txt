@@ -21,6 +21,7 @@ Once upon a time, a
     #royal thing
         *set prinz "prince-thing"
         *set prinzes "its"
+        *set prinzer "it"
         *set prinze "it"
         *goto Princess
 
