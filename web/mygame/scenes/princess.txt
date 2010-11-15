@@ -3,7 +3,6 @@
 *create prinze
 *create prinzes
 *create prinzer
-*create monster
 
 Once upon a time, a
 *choice
