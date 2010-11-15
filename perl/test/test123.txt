@@ -1,0 +1,73 @@
+*comment a;
+*label a
+Currently: a.
+*choice
+  *comment a -> b;   // line 7
+  #b
+    You choose b.
+    *page_break
+    *goto b
+  
+  *comment a -> x;   // line 8
+  #x
+    You choose x.
+    *page_break
+    *goto x
+  
+  *comment a -> y;   // line 8
+  #y
+    You choose y.
+    *page_break
+    *goto y
+  
+  *comment a -> z;   // line 12
+  #say hello
+    hi
+    *page_break
+    *goto z
+  
+
+*comment y;
+*label y
+Currently: y.
+*goto next_scene
+
+*comment c;
+*label c
+Currently: c.
+*goto next_scene
+
+*comment b;
+*label b
+Currently: b.
+*choice
+  *comment b -> c;   // line 7
+  #c
+    You choose c.
+    *page_break
+    *goto c
+  
+  *comment b -> x;   // line 15
+  #x
+    You choose x.
+    *page_break
+    *goto x
+  
+
+*comment x;
+*label x
+Currently: x.
+*line_break
+*comment x -> z;
+multi-line
+label
+*page_break
+*goto z
+
+*comment z;
+*label z
+Currently: z.
+*goto next_scene
+
+*label next_scene
+*finish
