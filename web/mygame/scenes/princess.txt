@@ -1,0 +1,105 @@
+*reset
+*create prinz
+*create prinze
+*create prinzes
+*create prinzer
+*create monster
+
+Once upon a time, a
+*choice
+    #prince
+        *set prinz "prince"
+        *set prinzes "his"
+        *set prinzer "him"
+        *set prinze "he"
+        *goto Princess
+    #princess
+        *set prinz "princess"
+        *set prinzes "her"
+        *set prinzer "her"
+        *set prinze "she"
+        *goto Princess
+    #royal thing
+        *set prinz "prince-thing"
+        *set prinzes "its"
+        *set prinze "it"
+        *goto Princess
+
+*label Princess
+Once upon a time, a
+*print prinz
+fought a
+*choice
+    #dragon
+        *goto Dragon
+    #witch
+        *goto Witch
+
+*label Dragon
+Once upon a time, a ${prinz} fought a dragon,
+defeating it through great valor.
+*goto Rescue
+ 
+*label Witch
+Once upon a time, a ${prinz} fought a witch.
+Upon receiving a mortal blow,
+the witch clapped her hands,
+summoning a murder of phantom crows
+from the air, like thickening black smoke.
+The ${prinz}
+*choice
+    #clapped ${prinzes} hands to counter the spell
+        As quick as the smoke had thickened, it vanished: the phantom crows gone.
+        The witch died with a croak.
+        *goto Rescue
+    #blew the smoke away
+        The warm breath of the ${prinz} only seemed to feed whatever magic fueled the crows' materialization into physical form.
+        One now shimmered to solidity right in front of ${prinzer}.
+        As the unnaturally large black crow hung in front of ${prinzes} face,
+        beak and lips touched momentarily in an unnatural kiss.
+        *goto KissCrow
+
+*label Rescue
+The ${prinz} strode forward and cut free a captured
+*fake_choice
+    #prince
+    #princess
+The royal captive was both grateful and, according to the custom of the time,
+*choice
+ #appealing to the ${prinz}. They were married one year later, to the day.
+  *goto Wedding
+ #appealing, but not as appealing as their sister. The ${prinz} married her instead.
+  *goto Wedding
+ #appealing, indeed, as was the sister, but neither was appealing as their youngest brother. The ${prinz} married him instead.
+  *goto Wedding
+
+*label Wedding
+The wedding was the social event of the decade.
+*choice
+ #One year into their union, the couple was blessed with child.
+  To their horror, the new baby had the features of a crow.
+  *choice
+   #They never ceased trying to find a remedy to whatever curse had befallen their child.
+    Eventually the child was returned to human form.
+    *finish
+   #They sank into bitter despair.
+    The child was known forever after as the crow ${prinz}.
+    *finish
+ #The couple remained loving but childless into old age.
+  *finish
+
+*label KissCrow
+An unearthly chime sounded and the world was still.
+*choice
+    #When its beak touched the lips of the ${prinz}, the crow became human
+       And so it was: the ${prinz} saw that the crow was the ghost of ${prinzes} true love, returned from death by questionable magic.
+       *finish
+    #When ${prinzes} lips touched the beak of the crow, the ${prinz} became a crow
+       From that day forward,
+       *choice
+           #${prinze} never ceased in ${prinzes} efforts to return to human form
+            Eventually the ${prinz} did return to human form.
+            *finish
+           #${prinze} sank into grim despair
+            It is as you say, for ${prinze} was since always known as the crow ${prinz}.
+            *finish
