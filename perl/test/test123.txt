@@ -34,12 +34,13 @@ Currently: y.
 
 *comment c;
 *label c
-Currently: c.
+hello
+world
 *goto next_scene
 
 *comment b;
 *label b
-Currently: b.
+whoa
 *choice
   *comment b -> c;   // line 7
   #c

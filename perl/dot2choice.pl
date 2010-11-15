@@ -54,9 +54,13 @@ for my $src_dest_attr_lnum (map ($dot[$_] =~ /$multiRegex/ ? [$1,$2,$3,$_] : () 
 }
 
 # nodes
-my %node_attr = (map (/$nodeRegex/ ? ($1=>$2) : (),
-		      grep (!/\->/, @lines)),
-		 map (($_->[0] => "", $_->[1] => ""), @trans));
+my @node_lines = grep ($dot[$_] !~ /$transRegex/ && $dot[$_] !~ /$multiRegex/, @lines);
+my %node_attr = map ($dot[$_] =~ /$nodeRegex/ ? ($1=>$2) : (), @node_lines);
+for my $src_dest (@trans) {
+    my ($src, $dest) = @$src_dest;
+    $node_attr{$src} = "" unless exists $node_attr{$src};
+    $node_attr{$dest} = "" unless exists $node_attr{$dest};
+}
 my @node = keys %node_attr;
 
 # ensure the first node mentioned in the dotfile is the first in @node, and therefore, the first in the scene
