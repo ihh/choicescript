@@ -32,7 +32,7 @@ my @lines = grep ($dot[$_] !~ /$keywordRegex/
 		      || $dot[$_] =~ /$nodeRegex/),
 		  0..$#dot);
 
-# single transitions
+# transitions
 my @trans;
 for my $src_dest_attr_lnum (map ($dot[$_] =~ /$transRegex/ ? [$1,$2,$3,$_] : () , @lines)) {
     my ($src, $dest, $attr, $lnum) = @$src_dest_attr_lnum;
