@@ -159,7 +159,7 @@ This option overrides the default behavior, which is to print one monolithic str
 
 =head1 DESCRIPTION
 
-B<graph2choice> will read a graph file in GraphViz format and generate stubs for a ChoiceScript scene.
+B<graph2choice> will read a graph file in GraphViz DOT format and generate minimal stubs for a ChoiceScript scene.
 
 In the GraphViz file, use 'label' node/edge attributes for narrative text, and 'tooltip' edge attribute for choice text.
 
