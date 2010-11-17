@@ -34,7 +34,9 @@ my @node = keys %node_attr;
 
 my @trans;
 for my $edge ($graph->edges()) {
-    push @trans, [$edge->from()->name(), $edge->to()->name(), $edge->get_attributes()];
+    my ($from, $to, $attr) = ($edge->from()->name(), $edge->to()->name(), $edge->get_attributes());
+    push @trans, [$from, $to, $attr];
+    push @trans, [$to, $from, $attr] if $graph->is_undirected();
 }
 
 # ensure the start node is the first in @node, and therefore, the first in the scene

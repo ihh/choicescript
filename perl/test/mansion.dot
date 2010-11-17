@@ -1,0 +1,5 @@
+graph mansion {
+ basement -- lobby -- { living_room dining_room study laundry stairs };
+ dining_room -- kitchen -- back_porch -- laundry;
+ stairs -- upstairs_lobby -- { master_bedroom west_bedroom north_bedroom };
+}
