@@ -8,13 +8,15 @@ use Pod::Usage;
 # parse options
 my $man = 0;
 my $help = 0;
-my $startScene = "start";
-my $createSceneFiles = 0;
+my $start_node = "start";
+my $create_scene_files = 0;
+my $track_node_visits = 0;
 
 GetOptions ('help|?' => \$help,
 	    'man' => \$man,
-	    'init=s' => \$startScene,
-	    'scenes' => \$createSceneFiles) or pod2usage(2);
+	    'init=s' => \$start_node,
+	    'scenes' => \$create_scene_files,
+	    'track' => \$track_node_visits) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
@@ -33,34 +35,64 @@ for my $node ($graph->nodes()) {
 my @node = keys %node_attr;
 
 my @trans;
+my %edges_to;
 for my $edge ($graph->edges()) {
     my ($from, $to, $attr) = ($edge->from()->name(), $edge->to()->name(), $edge->get_attributes());
     push @trans, [$from, $to, $attr];
-    push @trans, [$to, $from, $attr] if $graph->is_undirected();
+    ++$edges_to{$to};
+    if ($graph->is_undirected) {
+	push @trans, [$to, $from, $attr];
+	++$edges_to{$from};
+    }
+}
+
+# ensure we have a start node
+unless (grep ($_ eq $start_node, @node)) {
+    # look for nodes with nothing incoming
+    my @src_only = grep (!defined($edges_to{$_}), @node);
+    if (@src_only == 1) {
+	$start_node = $src_only[0];
+    } else {
+	warn
+	    "Warning: initial node '$start_node' not found.\n",
+	    "Node sequence will be random... better add a *goto\n";
+    }
 }
 
 # ensure the start node is the first in @node, and therefore, the first in the scene
 # (beyond this, the ordering of nodes in the choicescript file doesn't matter too much)
-unless ($createSceneFiles) {  # this is all irrelevant if we're creating files, which are unordered
-    if (grep ($_ eq $startScene, @node)) {
-	@node = ($startScene, grep ($_ ne $startScene, @node));
-    } else {
-	warn "Warning: initial node '$startScene' not found.\n", "Order in which nodes are output may be random\n";
-    }
+if (grep ($_ eq $start_node, @node)) {
+    @node = ($start_node, grep ($_ ne $start_node, @node));
 }
 
 # sort transitions by source
 my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
+# variables
+my @vars;
+if ($track_node_visits) {
+    push @vars, "visits";
+    push @vars, map ($_."_visits", @node);
+}
+
+# startup code
+my @startup;
+# create variables
+my $create = $create_scene_files ? "*create" : "*temp";
+push @startup, map ("$create $_", @vars);
+push @startup, map ("*set $_ 0", @vars);
+
 # loop over sources
 for my $node (@node) {
     my @out;
     push @out, map (defined() ? "$_\n" : (),
-		    "*comment $node;",
-		    $createSceneFiles ? undef : "*label $node",
-		    getAttr ($node_attr{$node}, "label", "Currently: $node."));
-    my $goto = $createSceneFiles ? "*goto_scene" : "*goto";
+		    $node eq $start_node ? @startup : (),
+		    "\n*comment $node;",
+		    $create_scene_files ? undef : "*label $node",
+		    $track_node_visits ? ("*set ${node}_visits +1", "*set visits ${node}_visits") : (),
+		    getAttr ($node_attr{$node}, "label", $track_node_visits ? "Currently: $node (visit #\${visits})." : "Currently: $node."));
+    my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	push @out, "*choice\n";
 	my @choices = @{$choice{$node}};
@@ -94,7 +126,7 @@ for my $node (@node) {
 	push @out, "*finish\n\n";
     }
     # write output
-    if ($createSceneFiles) {
+    if ($create_scene_files) {
 	local *SCENE;
 	open SCENE, ">$node.txt" or die "Couldn't create $node.txt: $!";
 	print SCENE @out;
@@ -156,6 +188,14 @@ If no value is specified, the program will look for a node named 'start'.
 Create multiple scene files, connected by *goto_scene.
 
 This option overrides the default behavior, which is to print one monolithic stream of choicescript to standard output, containing multiple *label's connected by *goto.
+
+=item B<-track>
+
+Track the number of visits to each node in a ChoiceScript variable ${node_visits}.
+
+The first time the player visits the node, this variable will be 1; on the next visit, 2; and so on.
+
+For convenience, this variable is also mirrored in ${visits} for the duration of the node.
 
 =back
 
