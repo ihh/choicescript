@@ -1,5 +1,12 @@
 #!/usr/bin/perl -W
 
+warn "\n",
+    "This program is made obsolete by graph2choice.pl, findable here...\n",
+    "https://github.com/ihh/choicescript/blob/master/perl/graph2choice.pl\n",
+    "...or in the same directory you found this program.\n\n",
+    "Use this older version only if you have a pathological aversion to\n",
+    "installing CPAN modules.\n\n";
+
 # print usage
 if (grep (/^-h/, @ARGV)) {
     die
