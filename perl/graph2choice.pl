@@ -70,18 +70,21 @@ my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
 # variables
-my @vars;
+my %var;
 if ($track_node_visits) {
-    push @vars, "visits";
-    push @vars, map ($_."_visits", @node);
+    %var = (%var,
+	    map (($_ => 0),
+		 "visits",
+		 map ($_."_visits", @node)));
 }
 
 # startup code
 my @startup;
 # create variables
+my @vars = sort keys %var;
 my $create = $create_scene_files ? "*create" : "*temp";
 push @startup, map ("$create $_", @vars);
-push @startup, map ("*set $_ 0", @vars);
+push @startup, map (defined($var{$_}) ? "*set $_ $var{$_}" : (), @vars);
 
 # loop over sources
 for my $node (@node) {
@@ -95,7 +98,8 @@ for my $node (@node) {
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	push @out, "*choice\n";
-	my @choices = @{$choice{$node}};
+	$edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; 'weight' would be preferable, but Graph::Easy ignores this for some reason
+	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for my $dest_attrs (@choices) {
 	    my ($dest, $attrs) = @$dest_attrs;
 	    my $tip = getAttr ($attrs, "title", "$dest");  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
@@ -144,7 +148,7 @@ sub getAttr {
     my ($attrHashRef, $attr, $default) = @_;
     my $val;
     $val = $attrHashRef->{$attr} if exists($attrHashRef->{$attr});
-    $val = $default unless defined($val) && length($val) > 1;
+    $val = $default unless defined($val) && length($val) > 0;
     $val =~ s/\\n/\n/g if defined $val;
     return $val;
 }
@@ -204,5 +208,10 @@ For convenience, this variable is also mirrored in ${visits} for the duration of
 B<graph2choice> will read a graph file in GraphViz DOT format and generate minimal stubs for a ChoiceScript scene.
 
 In the GraphViz file, use 'label' node/edge attributes for narrative text, and 'tooltip' edge attribute for choice text.
+
+Use the 'minlen' edge attribute to control the ordering of choices.
+Edges with a higher 'minlen' attribute will appear further down the list.
+
+Undirected graphs are implicitly converted to directed graphs with edges in both directions (useful for creating maps).
 
 =cut
