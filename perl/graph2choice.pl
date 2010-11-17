@@ -15,6 +15,7 @@ my $start_node = "start";
 my $create_scene_files = 0;
 my $track_node_visits = 0;
 my $template_filename;
+my $keep_template_stubs = 0;
 
 # parse command-line
 GetOptions ('help|?' => \$help,
@@ -22,7 +23,8 @@ GetOptions ('help|?' => \$help,
 	    'init=s' => \$start_node,
 	    'scenes' => \$create_scene_files,
 	    'track' => \$track_node_visits,
-	    'template=s' => \$template_filename) or pod2usage(2);
+	    'template=s' => \$template_filename,
+	    'stubs' => \$keep_template_stubs) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
@@ -75,12 +77,17 @@ if (grep ($_ eq $start_node, @node)) {
 my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
+# initialize default templates
+my %template = $keep_template_stubs
+    ? ()
+    : ('top_of_file' => [],
+       map (("pre_$_" => []), @node),
+       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @node),
+       map (("segue_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @node),
+       map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits})." : ".")]), @node));
+
 # load templates
-my %template;
-my $using_templates = 0;
 if (defined $template_filename) {
-    $using_templates = 1;
-    %template = ('top_of_file' => []);
     local *TMPL;
     local $_;
     open TMPL, "<$template_filename" or die "Couldn't open template file '$template_filename': $!";
@@ -105,12 +112,6 @@ while (my ($tmpl, $val) = each %template) {
 # create template regex
 my $template_regex = '\b(' . join('|',keys(%template)) . '|include_' . $name_regex . ')\b';
 
-# labels to use
-my ($pre_prefix, $choose_prefix, $segue_prefix, $view_prefix, $period_suffix, $visits_suffix) =
-    $using_templates
-    ? (qw(pre_ choose_ segue_ view_), "", "")
-    : ("", "You choose ", "Next: ", "Currently: ", ".", " (visit #\${visits}).");
-
 # variables
 my %var;
 if ($track_node_visits) {
@@ -121,7 +122,7 @@ if ($track_node_visits) {
 }
 
 # startup code
-my @startup = $using_templates ? qw(top_of_file) : ();
+my @startup = qw(top_of_file);
 # create variables
 my @vars = sort keys %var;
 my $create = $create_scene_files ? "*create" : "*temp";
@@ -137,7 +138,7 @@ for my $node (@node) {
 		       "*comment $node;",
 		       $create_scene_files ? undef : "*label $node",
 		       $track_node_visits ? ("*set ${node}_visits +1", "*set visits ${node}_visits") : (),
-		       getAttr ($node_attr{$node}, "label", $view_prefix . $node . ($track_node_visits ? $visits_suffix : $period_suffix)));
+		       getAttr ($node_attr{$node}, "label", "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	my $is_if = exists $template{"if_$node"};
@@ -146,8 +147,8 @@ for my $node (@node) {
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
-	    my $tip = getAttr ($attrs, "title", $pre_prefix . $dest);  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
-	    my $label = getAttr ($attrs, "label", $choose_prefix . $dest . $period_suffix);
+	    my $tip = getAttr ($attrs, "title", "pre_$dest");  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
+	    my $label = getAttr ($attrs, "label", "choose_$dest");
 	    push @out, indent ($is_if ? 0 : 2,
 			       $is_if ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
 			       $is_if ? ($n_choice==0 ? "*if $tip" : "*elseif $tip") : "# $tip",
@@ -161,14 +162,12 @@ for my $node (@node) {
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $tip = getAttr ($attrs, "title", undef);  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
-	my $label = getAttr ($attrs, "label", $segue_prefix . $dest . $period_suffix);
+	my $label = getAttr ($attrs, "label", "segue_$dest");
 	push @out, indent (0,
 			   "",
-			   "*line_break",
 			   "*comment $node -> $dest;",
 			   $tip,
 			   $label,
-			   "*page_break",
 			   "$goto $dest",
 			   "");
     } else {
@@ -250,7 +249,8 @@ graph2choice.pl [options] <graph file>
     -init <name>      specify initial node
     -scenes           create scene files
     -track            track node visits
-    -template <file>  use templates
+    -template <file>  use template defs file
+    -stubs            preserve template stubs
 
 =head1 OPTIONS
 
@@ -312,6 +312,11 @@ The following templates are created/checked automatically:
    view_NODE    text displayed when NODE is visited
    if_NODE      dummy template; if defined, NODE will use *if instead of *choice
    include_FILE pastes in the contents of "FILE.txt"
+
+=item B<-stubs>
+
+Do not define the default templates (top_of_file, pre_NODE, choose_NODE, segue_NODE, view_NODE).
+Instead leave them as stubs visible to the player.
 
 =back
 
