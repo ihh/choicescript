@@ -8,9 +8,13 @@ use Pod::Usage;
 # parse options
 my $man = 0;
 my $help = 0;
-my $startScene = undef;
+my $startScene = "start";
+my $createSceneFiles = 0;
 
-GetOptions('help|?' => \$help, man => \$man, 'start=s' => \$startScene) or pod2usage(2);
+GetOptions ('help|?' => \$help,
+	    'man' => \$man,
+	    'init=s' => \$startScene,
+	    'scenes' => \$createSceneFiles) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
@@ -35,17 +39,13 @@ for my $edge ($graph->edges()) {
 
 # ensure the start node is the first in @node, and therefore, the first in the scene
 # (beyond this, the ordering of nodes in the choicescript file doesn't matter too much)
-if (defined $startScene) {
+unless ($createSceneFiles) {  # this is all irrelevant if we're creating files, which are unordered
     if (grep ($_ eq $startScene, @node)) {
 	@node = ($startScene, grep ($_ ne $startScene, @node));
     } else {
-	warn "Warning: starting node '$startScene' not found\n";
+	warn "Warning: initial node '$startScene' not found.\n", "Order in which nodes are output may be random\n";
     }
 }
-
-# create dummy name for last scene
-my $endScene = "next_scene";
-while (exists $node_attr{$endScene}) { $endScene .= "_" }
 
 # sort transitions by source
 my %choice;
@@ -53,43 +53,54 @@ grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
 # loop over sources
 for my $node (@node) {
-    print map ("$_\n",
-	       "*comment $node;",
-	       "*label $node",
-	       getAttr ($node_attr{$node}, "label", "Currently: $node."));
+    my @out;
+    push @out, map (defined() ? "$_\n" : (),
+		    "*comment $node;",
+		    $createSceneFiles ? undef : "*label $node",
+		    getAttr ($node_attr{$node}, "label", "Currently: $node."));
+    my $goto = $createSceneFiles ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
-	print "*choice\n";
+	push @out, "*choice\n";
 	my @choices = @{$choice{$node}};
 	for my $dest_attrs (@choices) {
 	    my ($dest, $attrs) = @$dest_attrs;
 	    my $tip = getAttr ($attrs, "title", "$dest");  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
 	    my $label = getAttr ($attrs, "label", "You choose $dest.");
-	    print map ("  $_\n",
-		       "*comment $node -> $dest;",
-		       "#$tip",
-		       "  $label",
-		       "  *page_break",
-		       "  *goto $dest",
-		       "");
+	    push @out, map (defined() ? "  $_\n" : (),
+			    "*comment $node -> $dest;",
+			    "#$tip",
+			    "  $label",
+			    "  *page_break",
+			    "  $goto $dest",
+			    "");
 	}
-	print "\n";
+	push @out, "\n";
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
-	my $label = getAttr ($attrs, "label", "You choose $dest.");
-	print map ("$_\n",
-		   "*line_break",
-		   "*comment $node -> $dest;",
-		   $label,
-		   "*page_break",
-		   "*goto $dest",
-		   "");
+	my $tip = getAttr ($attrs, "title", undef);  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
+	my $label = getAttr ($attrs, "label", "Next: $dest.");
+	push @out, map (defined() ? "$_\n" : (),
+			"",
+			"*line_break",
+			"*comment $node -> $dest;",
+			$tip,
+			$label,
+			"*page_break",
+			"$goto $dest",
+			"");
     } else {
-	print "*goto $endScene\n\n";
+	push @out, "*finish\n\n";
+    }
+    # write output
+    if ($createSceneFiles) {
+	local *SCENE;
+	open SCENE, ">$node.txt" or die "Couldn't create $node.txt: $!";
+	print SCENE @out;
+	close SCENE or die "Couldn't write $node.txt: $!";
+    } else {
+	print @out;
     }
 }
-
-# print dummy last scene
-print "*label $endScene\n", "*finish\n";
 
 # and that's it
 exit;
@@ -100,7 +111,7 @@ sub getAttr {
     my $val;
     $val = $attrHashRef->{$attr} if exists($attrHashRef->{$attr});
     $val = $default unless defined($val) && length($val) > 1;
-    $val =~ s/\\n/\n/g;
+    $val =~ s/\\n/\n/g if defined $val;
     return $val;
 }
 
@@ -108,16 +119,17 @@ __END__
 
 =head1 NAME
 
-graph2choice - convert GraphViz files to ChoiceScript
+graph2choice.pl - convert GraphViz files to ChoiceScript
 
 =head1 SYNOPSIS
 
-graph2choice [options] <graph file>
+graph2choice.pl [options] <graph file>
 
   Options:
     -help,-?         brief help message
     -man             full documentation
-    -start <name>    specify starting node
+    -init <name>     specify initial node
+    -scenes          create scene files
 
 =head1 OPTIONS
 
@@ -131,9 +143,17 @@ Print a brief help message and exits.
 
 Prints the manual page and exits.
 
-=item B<-start>
+=item B<-init>
 
-Specify the name of the starting node in the graph (i.e. where the choicescript scene begins).
+Specify the name of the initial node in the graph (i.e. where the choicescript scene begins).
+
+If no value is specified, the program will look for a node named 'start'.
+
+=item B<-scenes>
+
+Create multiple scene files, connected by *goto_scene.
+
+This option overrides the default behavior, which is to print one monolithic stream of choicescript to standard output, containing multiple *label's connected by *goto.
 
 =back
 
