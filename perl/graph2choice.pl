@@ -12,6 +12,7 @@ my $name_regex = '[A-Za-z_][A-Za-z_\d]*';
 my $preview_attr = "title";  # edge attribute; graphviz 'tooltip' gets converted to Graph::Easy 'title'
 my $choose_attr = "label";  # edge attribute
 my $view_attr = "label";  # node attribute
+my $edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; 'weight' would be preferable, but Graph::Easy ignores this for some reason
 
 # command-line options
 my $man = 0;
@@ -82,12 +83,16 @@ if (grep ($_ eq $start_node, @node)) {
 my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
-# identify preview labels
+# get all preview labels
 my %preview_destination;
 for my $src_dest_attr (@trans) {
     my $preview = getAttr ($src_dest_attr->[2], $preview_attr, undef);
     $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
 }
+
+# get choice nodes & segue nodes
+my @choice_node = grep (exists($choice{$_}) && @{$choice{$_}} >= 2, @node);
+my @segue_node = grep (exists($choice{$_}) && @{$choice{$_}} == 1, @node);
 
 # initialize default templates
 my %template = $keep_template_stubs
@@ -95,8 +100,8 @@ my %template = $keep_template_stubs
     : ('top_of_file' => [],
        map (("preview_$_" => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
-       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @node),
-       map (("segue_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @node),
+       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
+       map (("choose_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @segue_node),
        map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits})." : ".")]), @node));
 
 # load templates
@@ -170,7 +175,6 @@ for my $node (@node) {
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	my $is_if = exists $template{"if_$node"};
 	push @out, "*choice" if !$is_if;
-	$edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; 'weight' would be preferable, but Graph::Easy ignores this for some reason
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
@@ -195,7 +199,7 @@ for my $node (@node) {
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $preview = getAttr ($attrs, $preview_attr, undef);
-	my $choose = getAttr ($attrs, $choose_attr, "segue_$dest");
+	my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
 	push @out, indent (0,
 			   "",
 			   "*comment $node -> $dest;",
@@ -340,13 +344,14 @@ This will substitute all instances of 'label1', 'label2' and 'label3' with the c
 The following templates are created/checked automatically:
    top_of_file       occurs once at the very beginning of the file
    preview_NODE      text displayed when NODE appears in a list of choices
-   choose_NODE       text displayed when NODE is chosen from a list of choices
-   segue_NODE        text displayed when NODE is the only available choice
+   choose_NODE       text displayed when NODE is selected, or is the only possible choice
    view_NODE         text displayed when NODE is visited
    if_NODE           dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
    can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
    can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
    include_FILE      pastes in the contents of "FILE.txt"
+
+The names 'preview_NODE' and 'choose_NODE' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
 
 Note that if the 'choose_NODE' template name is overridden (by specifying the 'label' edge attribute in the graphviz file), e.g. to XXX, then can_choose_NODE will become can_XXX.
 This only works if 'choose_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_choose_NODE' is kept.
