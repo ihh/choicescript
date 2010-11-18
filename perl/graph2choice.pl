@@ -174,8 +174,8 @@ for my $node (@node) {
 		       $track_node_visits ? ("*set turns +1",
 					     "*set ${node}_visits +1",
 					     "*set visits ${node}_visits",
-					     'set previous_node ${node}',
-					     "set node $node"): (),
+					     '*set previous_node ${node}',
+					     "*set node $node"): (),
 		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
