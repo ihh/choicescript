@@ -8,6 +8,11 @@ use Pod::Usage;
 # regexes
 my $name_regex = '[A-Za-z_][A-Za-z_\d]*';
 
+# Graph::Easy node & edge attributes
+my $preview_attr = "title";  # edge attribute; graphviz 'tooltip' gets converted to Graph::Easy 'title'
+my $choose_attr = "label";  # edge attribute
+my $view_attr = "label";  # node attribute
+
 # command-line options
 my $man = 0;
 my $help = 0;
@@ -77,11 +82,19 @@ if (grep ($_ eq $start_node, @node)) {
 my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
+# identify preview labels
+my %preview_destination;
+for my $src_dest_attr (@trans) {
+    my $preview = getAttr ($src_dest_attr->[2], $preview_attr, undef);
+    $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
+}
+
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
     : ('top_of_file' => [],
-       map (("pre_$_" => []), @node),
+       map (("preview_$_" => [$_]), @node),
+       map (($_ => [$preview_destination{$_}]), keys %preview_destination),
        map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @node),
        map (("segue_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @node),
        map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits})." : ".")]), @node));
@@ -109,6 +122,20 @@ while (my ($tmpl, $val) = each %template) {
 	pop @$val;
     }
 }
+
+# identify "if" nodes and automatically create default can_choose_ templates if none exist
+my @if_nodes = grep (exists($template{"if_$_"}), @node);
+unless ($keep_template_stubs) {
+    for my $node (@if_nodes) {
+	for my $dest_attrs (@{$choice{$node}}) {
+	    my ($dest, $attrs) = @$dest_attrs;
+	    my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
+	    my $can_choose = $choose =~ /^$name_regex$/ ? "can_$choose" : "can_choose_$dest";
+	    $template{$can_choose} = ["1=1"] unless exists $template{$can_choose};
+	}
+    }
+}
+
 # create template regex
 my $template_regex = '\b(' . join('|',keys(%template)) . '|include_' . $name_regex . ')\b';
 
@@ -138,7 +165,7 @@ for my $node (@node) {
 		       "*comment $node;",
 		       $create_scene_files ? undef : "*label $node",
 		       $track_node_visits ? ("*set ${node}_visits +1", "*set visits ${node}_visits") : (),
-		       getAttr ($node_attr{$node}, "label", "view_$node"));
+		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	my $is_if = exists $template{"if_$node"};
@@ -147,27 +174,33 @@ for my $node (@node) {
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
-	    my $tip = getAttr ($attrs, "title", "pre_$dest");  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
-	    my $label = getAttr ($attrs, "label", "choose_$dest");
+	    my $preview = getAttr ($attrs, $preview_attr, "preview_$dest");
+	    my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
+	    my $can_preview = $preview =~ /^$name_regex$/ ? "can_$preview" : "can_preview_$dest";
+	    my $can_choose = $choose =~ /^$name_regex$/ ? "can_$choose" : "can_choose_$dest";
+	    my $conditional_preview = (exists($template{$can_choose}) ? "*selectable_if ( $can_choose ) " : "") . "# $preview";
 	    push @out, indent ($is_if ? 0 : 2,
 			       $is_if ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
-			       $is_if ? ($n_choice==0 ? "*if $tip" : "*elseif $tip") : "# $tip",
+			       $is_if
+			       ? ($n_choice==0 ? "*if $can_choose" : "*elseif $can_choose")
+			       : (exists($template{$can_preview})
+				  ? ("*if $can_preview", indent(1,$conditional_preview))
+				  : $conditional_preview),
 			       indent (2,
-				       $label,
-				       "*page_break",
+				       $choose,
 				       "$goto $dest"),
 			       "");
 	}
 	push @out, $is_if ? ("*else", indent(2,"*finish")) : "";
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
-	my $tip = getAttr ($attrs, "title", undef);  # graphviz 'tooltip' gets converted to Graph::Easy 'title'
-	my $label = getAttr ($attrs, "label", "segue_$dest");
+	my $preview = getAttr ($attrs, $preview_attr, undef);
+	my $choose = getAttr ($attrs, $choose_attr, "segue_$dest");
 	push @out, indent (0,
 			   "",
 			   "*comment $node -> $dest;",
-			   $tip,
-			   $label,
+			   $preview,
+			   $choose,
 			   "$goto $dest",
 			   "");
     } else {
@@ -305,17 +338,25 @@ The format of the file is as follows:
 This will substitute all instances of 'label1', 'label2' and 'label3' with the corresponding stanzas, using the appropriate indenting.
 
 The following templates are created/checked automatically:
-   top_of_file  occurs once at the very beginning of the file
-   pre_NODE     default for when NODE appears in a list of choices (or *if clause, when 'if_NODE' is defined)
-   choose_NODE  text displayed when NODE is chosen from a list of choices
-   segue_NODE   text displayed when NODE is the only available choice
-   view_NODE    text displayed when NODE is visited
-   if_NODE      dummy template; if defined, NODE will use *if instead of *choice
-   include_FILE pastes in the contents of "FILE.txt"
+   top_of_file       occurs once at the very beginning of the file
+   preview_NODE      text displayed when NODE appears in a list of choices
+   choose_NODE       text displayed when NODE is chosen from a list of choices
+   segue_NODE        text displayed when NODE is the only available choice
+   view_NODE         text displayed when NODE is visited
+   if_NODE           dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
+   can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
+   can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
+   include_FILE      pastes in the contents of "FILE.txt"
+
+Note that if the 'choose_NODE' template name is overridden (by specifying the 'label' edge attribute in the graphviz file), e.g. to XXX, then can_choose_NODE will become can_XXX.
+This only works if 'choose_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_choose_NODE' is kept.
+
+Similarly, if the 'preview_NODE' template name is overridden (by specifying the 'tooltip' edge attribute in the graphviz file), e.g. to YYY, then can_preview_NODE will become can_YYY.
+This only works if 'preview_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_preview_NODE' is kept.
 
 =item B<-stubs>
 
-Do not define the default templates (top_of_file, pre_NODE, choose_NODE, segue_NODE, view_NODE).
+Do not define the default templates (top_of_file, preview_NODE, choose_NODE, segue_NODE, view_NODE).
 Instead leave them as stubs visible to the player.
 
 =back
