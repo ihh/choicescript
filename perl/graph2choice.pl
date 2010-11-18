@@ -148,9 +148,10 @@ my $template_regex = '\b(' . join('|',keys(%template)) . '|include_' . $name_reg
 my %var;
 if ($track_node_visits) {
     %var = (%var,
-	    ("node" => ""),
+	    map (($_ => ""),
+		 qw(node previous_node)),
 	    map (($_ => 0),
-		 "visits",
+		 qw(visits turns),
 		 map ($_."_visits", @node)));
 }
 
@@ -170,7 +171,11 @@ for my $node (@node) {
 		       "",
 		       "*comment $node;",
 		       $create_scene_files ? undef : "*label $node",
-		       $track_node_visits ? ("*set ${node}_visits +1", "*set visits ${node}_visits", "set node $node") : (),
+		       $track_node_visits ? ("*set turns +1",
+					     "*set ${node}_visits +1",
+					     "*set visits ${node}_visits",
+					     'set previous_node ${node}',
+					     "set node $node"): (),
 		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
@@ -316,12 +321,16 @@ This option overrides the default behavior, which is to print one monolithic str
 
 =item B<-track>
 
-Track the number of visits to each node in a ChoiceScript variable ${node_visits}.
+Track the number of visits to each node X in a ChoiceScript variable ${X_visits}.
 
 The first time the player visits the node, this variable will be 1; on the next visit, 2; and so on.
 
-For convenience, this variable is also mirrored in ${visits} for the duration of the node,
-while the name of the node itself is mirrored in ${node}.
+For convenience, some other ChoiceScript variables are also set:
+
+ ${visits}         equal to ${X_visits} where X is the node name
+ ${turns}          number of turns that the player has been playing
+ ${node}           name of the current node (X, in the above example)
+ ${previous_node}  name of the previously-visited node
 
 =item B<-template> filename
 
