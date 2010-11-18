@@ -67,9 +67,7 @@ unless (grep ($_ eq $start_node, @node)) {
     if (@src_only == 1) {
 	$start_node = $src_only[0];
     } else {
-	warn
-	    "Warning: initial node '$start_node' not found.\n",
-	    "Node sequence will be random... better add a *goto\n";
+	warn "Warning: initial node '$start_node' not found. Starting point may be unpredictable...\n";
     }
 }
 
@@ -102,7 +100,7 @@ my %template = $keep_template_stubs
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
        map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
        map (("choose_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @segue_node),
-       map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits})." : ".")]), @node));
+       map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
 
 # load templates
 for my $template_filename (@template_filename) {
@@ -148,7 +146,7 @@ my $template_regex = '\b(' . join('|',keys(%template)) . '|include_' . $name_reg
 my %var;
 if ($track_node_visits) {
     %var = (%var,
-	    map (($_ => ""),
+	    map (($_ => '"nowhere"'),
 		 qw(node previous_node)),
 	    map (($_ => 0),
 		 qw(visits turns),
@@ -164,18 +162,19 @@ push @startup, map ("$create $_", @vars);
 push @startup, map (defined($var{$_}) ? "*set $_ $var{$_}" : (), @vars);
 
 # loop over sources
-for my $node (@node) {
+for my $node_pos (0..$#node) {
+    my $node = $node[$node_pos];
     my @out;
     push @out, indent (0,
-		       $node eq $start_node ? @startup : (),
+		       $node_pos == 0 ? @startup : (),
 		       "",
 		       "*comment $node;",
 		       $create_scene_files ? undef : "*label $node",
 		       $track_node_visits ? ("*set turns +1",
 					     "*set ${node}_visits +1",
 					     "*set visits ${node}_visits",
-					     '*set previous_node ${node}',
-					     "*set node $node"): (),
+					     '*set previous_node node',
+					     "*set node \"$node\""): (),
 		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
