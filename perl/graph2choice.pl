@@ -121,10 +121,10 @@ while (my ($tmpl, $val) = each %template) {
     }
 }
 
-# identify "if" nodes and automatically create default can_choose_ templates if none exist
-my @if_nodes = grep (exists($template{"if_$_"}), @node);
+# identify "auto" nodes and automatically create default can_choose_ templates if none exist
+my @auto_nodes = grep (exists($template{"auto_$_"}), @node);
 unless ($keep_template_stubs) {
-    for my $node (@if_nodes) {
+    for my $node (@auto_nodes) {
 	for my $dest_attrs (@{$choice{$node}}) {
 	    my ($dest, $attrs) = @$dest_attrs;
 	    my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
@@ -173,8 +173,8 @@ for my $node_pos (0..$#node) {
 		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
-	my $is_if = exists $template{"if_$node"};
-	push @out, "*choice" if !$is_if;
+	my $is_auto = exists $template{"auto_$node"};
+	push @out, "*choice" if !$is_auto;
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
@@ -183,9 +183,9 @@ for my $node_pos (0..$#node) {
 	    my $can_preview = $preview =~ /^$name_regex$/ ? "can_$preview" : "can_preview_$dest";
 	    my $can_choose = $choose =~ /^$name_regex$/ ? "can_$choose" : "can_choose_$dest";
 	    my $conditional_preview = (exists($template{$can_choose}) ? "*selectable_if ( $can_choose ) " : "") . "# $preview";
-	    push @out, indent ($is_if ? 0 : 2,
-			       $is_if ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
-			       $is_if
+	    push @out, indent ($is_auto ? 0 : 2,
+			       $is_auto ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
+			       $is_auto
 			       ? ($n_choice==0 ? "*if $can_choose" : "*elseif $can_choose")
 			       : (exists($template{$can_preview})
 				  ? ("*if $can_preview", indent(1,$conditional_preview))
@@ -195,7 +195,7 @@ for my $node_pos (0..$#node) {
 				       "$goto $dest"),
 			       "");
 	}
-	push @out, $is_if ? ("*else", indent(2,"*finish")) : "";
+	push @out, $is_auto ? ("*else", indent(2,"*finish")) : "";
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $preview = getAttr ($attrs, $preview_attr, undef);
@@ -352,7 +352,7 @@ The following templates are created/checked automatically:
   preview_NODE      text displayed when NODE appears in a list of choices
   choose_NODE       text displayed when NODE is selected, or is the only possible choice
   view_NODE         text displayed when NODE is visited
-  if_NODE           dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
+  auto_NODE         dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
   can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
   can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
   include_FILE      pastes in the contents of "FILE.txt"
