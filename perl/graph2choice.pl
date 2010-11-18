@@ -20,7 +20,7 @@ my $help = 0;
 my $start_node = "start";
 my $create_scene_files = 0;
 my $track_node_visits = 0;
-my $template_filename;
+my @template_filename;
 my $keep_template_stubs = 0;
 
 # parse command-line
@@ -29,7 +29,7 @@ GetOptions ('help|?' => \$help,
 	    'init=s' => \$start_node,
 	    'scenes' => \$create_scene_files,
 	    'track' => \$track_node_visits,
-	    'template=s' => \$template_filename,
+	    'template=s' => \@template_filename,
 	    'stubs' => \$keep_template_stubs) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -105,7 +105,7 @@ my %template = $keep_template_stubs
        map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits})." : ".")]), @node));
 
 # load templates
-if (defined $template_filename) {
+for my $template_filename (@template_filename) {
     local *TMPL;
     local $_;
     open TMPL, "<$template_filename" or die "Couldn't open template file '$template_filename': $!";
@@ -359,9 +359,11 @@ This only works if 'choose_NODE' is overridden to a string that is a valid templ
 Similarly, if the 'preview_NODE' template name is overridden (by specifying the 'tooltip' edge attribute in the graphviz file), e.g. to YYY, then can_preview_NODE will become can_YYY.
 This only works if 'preview_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_preview_NODE' is kept.
 
+You can use this option multiple times to load multiple template definition files.
+
 =item B<-stubs>
 
-Do not define the default templates (top_of_file, preview_NODE, choose_NODE, segue_NODE, view_NODE).
+Do not define the default templates (top_of_file, preview_NODE, choose_NODE, view_NODE).
 Instead leave them as stubs visible to the player.
 
 =back
