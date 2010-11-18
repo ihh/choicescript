@@ -88,18 +88,13 @@ for my $src_dest_attr (@trans) {
     $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
 }
 
-# get choice nodes & segue nodes
-my @choice_node = grep (exists($choice{$_}) && @{$choice{$_}} >= 2, @node);
-my @segue_node = grep (exists($choice{$_}) && @{$choice{$_}} == 1, @node);
-
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
     : ('top_of_file' => [],
        map (("preview_$_" => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
-       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
-       map (("choose_$_" => ["*line_break", "Next: " . $_ . ".", "*page_break"]), @segue_node),
+       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @node),
        map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
 
 # load templates
