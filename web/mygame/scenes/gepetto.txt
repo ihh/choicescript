@@ -1,153 +1,164 @@
+top_of_file
+
 *comment gepetto_the_toymaker_made_a;
 *label gepetto_the_toymaker_made_a
-Currently: gepetto_the_toymaker_made_a.
+Once there was a toymaker named Gepetto.
+Lacking a son, he tried to make one, using all his skill.
 *choice
-  *comment gepetto_the_toymaker_made_a -> boy;   // line 2
-  #boy
-    You choose boy.
+  *comment gepetto_the_toymaker_made_a -> boy;
+  # Was it a boy?
+    Yes, it was a wooden boy.
+    The wooden boy was as realistic as a boy could be.
+
     *page_break
     *goto boy
   
-  *comment gepetto_the_toymaker_made_a -> giant_robot;   // line 2
-  #giant_robot
-    You choose giant_robot.
+  *comment gepetto_the_toymaker_made_a -> giant_robot;
+  # Or was it a giant robot?
+    choose_giant_robot
     *page_break
     *goto giant_robot
   
 
+
 *comment shunned_by_humans;
 *label shunned_by_humans
-Currently: shunned_by_humans.
+view_shunned_by_humans
 *choice
-  *comment shunned_by_humans -> lives_in_woods;   // line 5
-  #lives_in_woods
-    You choose lives_in_woods.
+  *comment shunned_by_humans -> lives_in_woods;
+  # pre_lives_in_woods
+    choose_lives_in_woods
     *page_break
     *goto lives_in_woods
   
-  *comment shunned_by_humans -> alone;   // line 6
-  #alone
-    You choose alone.
+  *comment shunned_by_humans -> alone;
+  # pre_alone
+    choose_alone
     *page_break
     *goto alone
   
 
+
 *comment lives_in_woods;
 *label lives_in_woods
-Currently: lives_in_woods.
-*goto next_scene
+view_lives_in_woods
+*finish
+
 
 *comment killed_a_stranger;
 *label killed_a_stranger
-Currently: killed_a_stranger.
-*line_break
+view_killed_a_stranger
+
 *comment killed_a_stranger -> alone;
-You choose alone.
-*page_break
+segue_alone
 *goto alone
 
-*comment accidentally_killed_someone;
-*label accidentally_killed_someone
-Currently: accidentally_killed_someone.
-*choice
-  *comment accidentally_killed_someone -> killed_a_stranger;   // line 6
-  #killed_a_stranger
-    You choose killed_a_stranger.
-    *page_break
-    *goto killed_a_stranger
-  
-  *comment accidentally_killed_someone -> killed_gepetto;   // line 7
-  #killed_gepetto
-    You choose killed_gepetto.
-    *page_break
-    *goto killed_gepetto
-  
 
 *comment gepetto_died;
 *label gepetto_died
-Currently: gepetto_died.
-*goto next_scene
+view_gepetto_died
+
+*comment gepetto_died -> alone;
+segue_alone
+*goto alone
+
+
+*comment accidentally_killed_someone;
+*label accidentally_killed_someone
+view_accidentally_killed_someone
+*if 1=2
+  choose_killed_a_stranger
+  *page_break
+  *goto killed_a_stranger
+
+*elseif 1=1
+  choose_killed_gepetto
+  *page_break
+  *goto killed_gepetto
+
+*else
+  *finish
 
 *comment ran_away;
 *label ran_away
-Currently: ran_away.
-*line_break
+view_ran_away
+
 *comment ran_away -> alone;
-You choose alone.
-*page_break
+segue_alone
 *goto alone
+
 
 *comment giant_robot;
 *label giant_robot
-Currently: giant_robot.
+view_giant_robot
 *choice
-  *comment giant_robot -> shunned_by_humans;   // line 5
-  #shunned_by_humans
-    You choose shunned_by_humans.
-    *page_break
-    *goto shunned_by_humans
-  
-  *comment giant_robot -> accidentally_killed_someone;   // line 6
-  #accidentally_killed_someone
-    You choose accidentally_killed_someone.
-    *page_break
-    *goto accidentally_killed_someone
-  
-  *comment giant_robot -> invents_coffee_rain_maker;   // line 7
-  #invents_coffee_rain_maker
-    You choose invents_coffee_rain_maker.
+  *comment giant_robot -> invents_coffee_rain_maker;
+  # pre_invents_coffee_rain_maker
+    choose_invents_coffee_rain_maker
     *page_break
     *goto invents_coffee_rain_maker
   
+  *comment giant_robot -> accidentally_killed_someone;
+  # pre_accidentally_killed_someone
+    choose_accidentally_killed_someone
+    *page_break
+    *goto accidentally_killed_someone
+  
+  *comment giant_robot -> shunned_by_humans;
+  # pre_shunned_by_humans
+    choose_shunned_by_humans
+    *page_break
+    *goto shunned_by_humans
+  
 
-*comment leaves_gepetto_becomes_rich;
-*label leaves_gepetto_becomes_rich
-Currently: leaves_gepetto_becomes_rich.
-*line_break
-*comment leaves_gepetto_becomes_rich -> alone;
-You choose alone.
-*page_break
-*goto alone
-
-*comment invents_coffee_rain_maker;
-*label invents_coffee_rain_maker
-Currently: invents_coffee_rain_maker.
-*line_break
-*comment invents_coffee_rain_maker -> leaves_gepetto_becomes_rich;
-You choose leaves_gepetto_becomes_rich.
-*page_break
-*goto leaves_gepetto_becomes_rich
 
 *comment alone;
 *label alone
-Currently: alone.
-*goto next_scene
+view_alone
+*finish
+
+
+*comment invents_coffee_rain_maker;
+*label invents_coffee_rain_maker
+view_invents_coffee_rain_maker
+
+*comment invents_coffee_rain_maker -> leaves_gepetto_becomes_rich;
+segue_leaves_gepetto_becomes_rich
+*goto leaves_gepetto_becomes_rich
+
+
+*comment leaves_gepetto_becomes_rich;
+*label leaves_gepetto_becomes_rich
+view_leaves_gepetto_becomes_rich
+
+*comment leaves_gepetto_becomes_rich -> alone;
+segue_alone
+*goto alone
+
 
 *comment boy;
 *label boy
-Currently: boy.
+view_boy
 *choice
-  *comment boy -> ran_away;   // line 3
-  #ran_away
-    You choose ran_away.
+  *comment boy -> ran_away;
+  # pre_ran_away
+    choose_ran_away
     *page_break
     *goto ran_away
   
-  *comment boy -> gepetto_died;   // line 4
-  #stay with Gepetto
-    You choose gepetto_died.
+  *comment boy -> gepetto_died;
+  # stay with Gepetto
+    choose_gepetto_died
     *page_break
     *goto gepetto_died
   
 
+
 *comment killed_gepetto;
 *label killed_gepetto
-Currently: killed_gepetto.
-*line_break
+view_killed_gepetto
+
 *comment killed_gepetto -> alone;
-You choose alone.
-*page_break
+segue_alone
 *goto alone
 
-*label next_scene
-*finish
