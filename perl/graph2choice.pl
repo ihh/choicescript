@@ -342,14 +342,15 @@ The format of the file is as follows:
 This will substitute all instances of 'label1', 'label2' and 'label3' with the corresponding stanzas, using the appropriate indenting.
 
 The following templates are created/checked automatically:
-   top_of_file       occurs once at the very beginning of the file
-   preview_NODE      text displayed when NODE appears in a list of choices
-   choose_NODE       text displayed when NODE is selected, or is the only possible choice
-   view_NODE         text displayed when NODE is visited
-   if_NODE           dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
-   can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
-   can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
-   include_FILE      pastes in the contents of "FILE.txt"
+
+  top_of_file       occurs once at the very beginning of the file
+  preview_NODE      text displayed when NODE appears in a list of choices
+  choose_NODE       text displayed when NODE is selected, or is the only possible choice
+  view_NODE         text displayed when NODE is visited
+  if_NODE           dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
+  can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
+  can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
+  include_FILE      pastes in the contents of "FILE.txt"
 
 The names 'preview_NODE' and 'choose_NODE' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
 
