@@ -265,17 +265,19 @@ sub substitute_templates {
 	my $line = shift @lines;
 	if ($line =~ /^(\s*.*)$template_regex(.*)$/) {
 	    my ($prelude, $tmpl, $rest) = ($1, $2, $3);
-	    my @subst;
+	    my @tmpl;
 	    if ($tmpl =~ /^include_(\S+)/) {
 		my $filename = $1 . ".txt";
 		local *INCL;
 		open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
-		@subst = <INCL>;
+		@tmpl = <INCL>;
 		close INCL;
+	    } elsif (defined $template{$tmpl}) {
+		@tmpl = @{$template{$tmpl}};
 	    } else {
-		@subst = @{$template{$tmpl}};
+		push @subst, $line;
 	    }
-	    unshift @lines, map ("$prelude$_$rest", @subst);
+	    unshift @lines, map ("$prelude$_$rest", @tmpl);
 	} else {
 	    push @subst, $line;
 	}
