@@ -1,5 +1,5 @@
 digraph G {
-	gepetto_the_toymaker_made_a -> { boy giant_robot };
+	start -> gepetto_the_toymaker_made_a -> { boy giant_robot };
 	boy -> ran_away -> alone;
 	boy -> gepetto_died [tooltip="stay with Gepetto"];
 	gepetto_died -> alone;
