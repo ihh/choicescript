@@ -49,21 +49,21 @@ for my $node ($graph->nodes()) {
 my @node = keys %node_attr;
 
 my @trans;
-my %edges_to;
+my %sources = map (($_ => []), @node);
 for my $edge ($graph->edges()) {
     my ($from, $to, $attr) = ($edge->from()->name(), $edge->to()->name(), $edge->get_attributes());
     push @trans, [$from, $to, $attr];
-    ++$edges_to{$to};
+    push @{$sources{$to}}, $from;
     if ($graph->is_undirected) {
 	push @trans, [$to, $from, $attr];
-	++$edges_to{$from};
+	push @{$sources{$from}}, $to;
     }
 }
 
 # ensure we have a start node
 unless (grep ($_ eq $start_node, @node)) {
     # look for nodes with nothing incoming
-    my @src_only = grep (!defined($edges_to{$_}), @node);
+    my @src_only = grep (@{$sources{$_}}==0, @node);
     if (@src_only == 1) {
 	$start_node = $src_only[0];
     } else {
@@ -88,13 +88,26 @@ for my $src_dest_attr (@trans) {
     $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
 }
 
+# distinguish "segue" nodes (nodes whose predecessors all have only one outgoing transition, and so are not reached by a choice of the player) from "choice" nodes (nodes reached by choice)
+# the need for this is a bit hacky: it's because our default edge text, "You choose X.", only depends on the destination node (X), and not on the source.
+my @segue_node;
+my @choice_node;
+for my $node (@node) {
+    if (grep (@{$choice{$_}} != 1, @{$sources{$node}})) {
+	push @choice_node, $node;
+    } else {
+	push @segue_node, $node;
+    }
+}
+
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
     : ('top_of_file' => [],
        map (("preview_$_" => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
-       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @node),
+       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
+       map (("choose_$_" => ["*page_break"]), @segue_node),
        map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
 
 # load templates
