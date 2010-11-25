@@ -78,6 +78,7 @@ if (grep ($_ eq $start_node, @node)) {
 }
 
 # sort transitions by source
+# $choice{$source} = [[$dest1,$attrs1],[$dest2,$attrs2],...]
 my %choice;
 grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
 
@@ -88,15 +89,28 @@ for my $src_dest_attr (@trans) {
     $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
 }
 
-# distinguish "segue" nodes (nodes whose predecessors all have only one outgoing transition, and so are not reached by a choice of the player) from "choice" nodes (nodes reached by choice)
+# distinguish "segue" nodes (nodes whose predecessors all have only one outgoing transition, and so are not reached by a choice of the player) from "choice" nodes (nodes reached by a "choice" edge)
 # the need for this is a bit hacky: it's because our default edge text, "You choose X.", only depends on the destination node (X), and not on the source.
+# if the edge has a non-default label (i.e. not "choose_X"), then we don't count that edge as a "choice" edge for the purposes of this test.
 my @segue_node;
 my @choice_node;
-for my $node (@node) {
-    if (grep (@{$choice{$_}} != 1, @{$sources{$node}})) {
-	push @choice_node, $node;
+for my $dest (@node) {
+    my $is_choice = 0;
+    for my $src (@{$sources{$dest}}) {  # there exists an edge src->dest
+	if (@{$choice{$src}} > 1) {  # there is more than one outgoing edge from src
+	    for my $dest_attrs (@{$choice{$src}}) {
+		if ($dest_attrs->[0] eq $dest) {
+		    if (!defined (getAttr ($dest_attrs->[1], "label"))) {   # there is at least one src->dest edge using the default label
+			$is_choice = 1;  # if these conditions are met, dest is a "choice node"
+		    }
+		}
+	    }
+	}
+    }
+    if ($is_choice) {
+	push @choice_node, $dest;
     } else {
-	push @segue_node, $node;
+	push @segue_node, $dest;
     }
 }
 
