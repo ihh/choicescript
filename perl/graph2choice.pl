@@ -289,11 +289,13 @@ sub substitute_templates {
 	    my ($prelude, $tmpl, $rest) = ($1, $2, $3);
 	    my @tmpl;
 	    if ($tmpl =~ /^include_(\S+)/) {
-		my $filename = $1 . $include_suffix;
+		my $prefix = $1;
+		my $filename = $prefix . $include_suffix;
 		local *INCL;
 		open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
 		@tmpl = <INCL>;
 		close INCL;
+		push @tmpl, "*label finish_$prefix";
 	    } elsif (defined $template{$tmpl}) {
 		@tmpl = @{$template{$tmpl}};
 	    } else {
@@ -400,7 +402,7 @@ The following templates are created/checked automatically:
   auto_NODE         dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
   can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
   can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
-  include_FILE      pastes in the contents of "FILE.include"
+  include_FILE      pastes in the contents of "FILE.include", automatically appending the line "*label finish_FILE"
 
 The names 'preview_NODE' and 'choose_NODE' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
 
