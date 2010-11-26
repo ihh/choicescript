@@ -284,7 +284,7 @@ sub substitute_templates {
 	    my ($prelude, $tmpl, $rest) = ($1, $2, $3);
 	    my @tmpl;
 	    if ($tmpl =~ /^include_(\S+)/) {
-		my $filename = "$1.$include_suffix";
+		my $filename = $1 . $include_suffix;
 		local *INCL;
 		open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
 		@tmpl = <INCL>;
