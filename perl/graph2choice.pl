@@ -18,6 +18,7 @@ my $edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; '
 my $man = 0;
 my $help = 0;
 my $start_node = "start";
+my $end_node;
 my $create_scene_files = 0;
 my $track_node_visits = 0;
 my @template_filename;
@@ -29,7 +30,8 @@ my $include_suffix = ".include";
 # parse command-line
 GetOptions ('help|?' => \$help,
 	    'man' => \$man,
-	    'init=s' => \$start_node,
+	    'initial=s' => \$start_node,
+	    'final=s' => \$end_node,
 	    'scenes' => \$create_scene_files,
 	    'track' => \$track_node_visits,
 	    'template=s' => \@template_filename,
@@ -186,6 +188,9 @@ my $create = $create_scene_files ? "*create" : "*temp";
 push @startup, map ("$create $_", @vars);
 push @startup, map (defined($var{$_}) ? "*set $_ $var{$_}" : (), @vars);
 
+# finish code
+my $finish = defined($end_node) ? "*goto $end_node" : "*finish";
+
 # loop over sources
 for my $node_pos (0..$#node) {
     my $node = $node[$node_pos];
@@ -225,7 +230,7 @@ for my $node_pos (0..$#node) {
 				       "$goto $dest"),
 			       "");
 	}
-	push @out, $is_auto ? ("*else", indent(2,"*finish")) : "";
+	push @out, $is_auto ? ("*else", indent(2,$finish)) : "";
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $preview = getAttr ($attrs, $preview_attr, undef);
@@ -238,7 +243,7 @@ for my $node_pos (0..$#node) {
 			   "$goto $dest",
 			   "");
     } else {
-	push @out, "*finish", "";
+	push @out, $finish, "";
     }
 
     # substitute templates
@@ -315,7 +320,8 @@ graph2choice.pl [options] <graph file>
   Options:
     -help,-?          brief help message
     -man              full documentation
-    -init <name>      specify initial node
+    -initial <name>   specify initial node
+    -final <name>     specify final node
     -scenes           create scene files
     -track            track node visits
     -template <file>  use template defs file
@@ -333,11 +339,18 @@ Print a brief help message and exits.
 
 Prints the manual page and exits.
 
-=item B<-init> name
+=item B<-initial> name
 
 Specify the name of the initial node in the graph (i.e. where the choicescript scene begins).
 
 If no value is specified, the program will look for a node named 'start'.
+
+=item B<-final> name
+
+Specify the name of the final node in the graph.
+Instead of exiting the scene with *finish, the game will *goto this node.
+
+It is assumed that the *label for this node is defined elsewhere, e.g. in the template file, or by an externally including file.
 
 =item B<-scenes>
 
