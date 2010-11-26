@@ -295,6 +295,7 @@ sub substitute_templates {
 		open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
 		@tmpl = <INCL>;
 		close INCL;
+		grep (chomp, @tmpl);
 		push @tmpl, "*label finish_$prefix";
 	    } elsif (defined $template{$tmpl}) {
 		@tmpl = @{$template{$tmpl}};
