@@ -461,7 +461,7 @@ The following templates are created/checked automatically:
   NODE.prompt    text displayed when NODE appears in a list of choice options
   NODE.choose    text displayed when NODE is selected, or is the only possible choice
   NODE.text      text displayed when NODE is visited
-  NODE.auto      dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
+  NODE.auto      dummy template; if defined, NODE will use "*if NODE.allow -> NODE.choose" instead of "*choice -> #NODE.prompt -> NODE.choose"
   NODE.show      if defined, a ChoiceScript expression that must evaluate true for NODE to be visible in a list of choices
   NODE.allow     if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
 
