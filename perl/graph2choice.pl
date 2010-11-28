@@ -6,7 +6,7 @@ use Graph::Easy::Parser::Graphviz;
 use Pod::Usage;
 
 # regexes
-my $name_regex = '[A-Za-z_][A-Za-z_\d]*';
+my $name_regex = '[A-Za-z_\.][A-Za-z_\.\d]*';
 
 # Graph::Easy node & edge attributes
 my $preview_attr = "title";  # edge attribute; graphviz 'tooltip' gets converted to Graph::Easy 'title'
