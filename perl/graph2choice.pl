@@ -5,8 +5,17 @@ use Graph::Easy;
 use Graph::Easy::Parser::Graphviz;
 use Pod::Usage;
 
+# file suffices
+my %suffix = map (($_=>".$_"), qw(top prompt choose text auto show allow txt));
+
+# keywords that extend ChoiceScript (sort of)
+my $template_keyword = "*template";
+my $include_keyword = "*include";
+
 # regexes
 my $name_regex = '[A-Za-z_\.][A-Za-z_\.\d]*';
+my $template_keyword_regex = quotemeta $template_keyword;
+my $include_keyword_regex = quotemeta $include_keyword;
 
 # Graph::Easy node & edge attributes
 my $preview_attr = "title";  # edge attribute; graphviz 'tooltip' gets converted to Graph::Easy 'title'
@@ -17,21 +26,20 @@ my $edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; '
 # command-line options
 my $man = 0;
 my $help = 0;
-my $start_node = "start";
+my $start_node;
 my $end_node;
+my $use_finish = 0;
 my $create_scene_files = 0;
 my $track_node_visits = 0;
 my @template_filename;
 my $keep_template_stubs = 0;
-
-# other constants/defaults
-my $include_suffix = ".include";
 
 # parse command-line
 GetOptions ('help|?' => \$help,
 	    'man' => \$man,
 	    'initial=s' => \$start_node,
 	    'final=s' => \$end_node,
+	    'finish' => \$use_finish,
 	    'scenes' => \$create_scene_files,
 	    'track' => \$track_node_visits,
 	    'template=s' => \@template_filename,
@@ -65,27 +73,48 @@ for my $edge ($graph->edges()) {
     }
 }
 
+# sort transitions by source
+# $choice{$source} = [[$dest1,$attrs1],[$dest2,$attrs2],...]
+my %choice;
+grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
+
 # ensure we have a start node
-unless (grep ($_ eq $start_node, @node)) {
+unless (defined($start_node) && grep ($_ eq $start_node, @node)) {
     # look for nodes with nothing incoming
     my @src_only = grep (@{$sources{$_}}==0, @node);
     if (@src_only == 1) {
 	$start_node = $src_only[0];
     } else {
-	warn "Warning: initial node '$start_node' not found. Starting point may be unpredictable...\n";
+	$start_node = undef;
     }
 }
 
 # ensure the start node is the first in @node, and therefore, the first in the scene
-# (beyond this, the ordering of nodes in the choicescript file doesn't matter too much)
-if (grep ($_ eq $start_node, @node)) {
+if (defined $start_node) {
     @node = ($start_node, grep ($_ ne $start_node, @node));
 }
 
-# sort transitions by source
-# $choice{$source} = [[$dest1,$attrs1],[$dest2,$attrs2],...]
-my %choice;
-grep (push(@{$choice{$_->[0]}}, [@$_[1,2]]), @trans);
+# ensure we have an end node
+unless ($use_finish) {
+    unless (defined($end_node) && grep ($_ eq $end_node, @node)) {
+	# look for nodes with nothing outgoing
+	my @dest_only = grep (!exists $choice{$_}, @node);
+	if (@dest_only == 1) {
+	    $end_node = $dest_only[0];
+	} else {
+	    # create a unique name
+	    my $finish_count = 1;
+	    do {
+		$end_node = "finish" . ($finish_count > 1 ? $finish_count : "");
+	    } while (exists $choice{$end_node});
+	}
+    }
+
+    # ensure the end node is the last in @node, and therefore, the last in the scene
+    if (defined $end_node) {
+	@node = (grep ($_ ne $end_node, @node), $end_node);
+    }
+}
 
 # get all preview labels
 my %preview_destination;
@@ -122,12 +151,14 @@ for my $dest (@node) {
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
-    : ('.top' => [],
-       map (("$_.prompt" => [$_]), @node),
+    : ($suffix{'top'} => [],
+       defined($end_node) ? ($end_node.$suffix{'text'} => []) : (),
+       map (($_.$suffix{'prompt'} => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
-       map (("$_.choose" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
-       map (("$_.choose" => ["*page_break"]), @segue_node),
-       map (("$_.text" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
+       map (($_.$suffix{'choose'} => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
+       map (($_.$suffix{'choose'} => ["*page_break"]), @segue_node),
+       map (($_.$suffix{'text'} => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]),
+	    defined($end_node) ? grep ($_ ne $end_node, @node) : @node));
 
 # load templates
 for my $template_filename (@template_filename) {
@@ -143,13 +174,13 @@ for my $template_filename (@template_filename) {
 	    my @tmpl = <TMPL>;
 	    close TMPL;
 	    grep (chomp, @tmpl);
-	    @{$template{$filename}} = \@tmpl;
+	    $template{$filename} = \@tmpl;
 	}
     } else {
 	open TMPL, "<$template_filename" or die "Couldn't open template file '$template_filename': $!";
 	my $current_template;
 	while (<TMPL>) {
-	    if (/^\s*\*template\s+($name_regex)\s*$/) {
+	    if (/^\s*$template_keyword_regex\s+($name_regex)\s*$/) {
 		$current_template = $1;
 		$template{$current_template} = [];
 	    } elsif (defined $current_template) {
@@ -167,14 +198,13 @@ while (my ($tmpl, $val) = each %template) {
     }
 }
 
-# identify "auto" nodes and automatically create default can_choose_ templates if none exist
-my @auto_nodes = grep (exists($template{"$_.auto"}), @node);
+# identify ".auto" nodes and automatically create default .allow templates if none exist
+my @auto_nodes = grep (exists($template{$_.$suffix{'auto'}}), @node);
 unless ($keep_template_stubs) {
     for my $node (@auto_nodes) {
 	for my $dest_attrs (@{$choice{$node}}) {
 	    my ($dest, $attrs) = @$dest_attrs;
-	    my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
-	    my $can_choose = $choose =~ /^$name_regex$/ ? "$choose.allow" : "$dest.allow";
+	    my $choose = getAttr ($attrs, $choose_attr, $dest) . $suffix{'allow'};
 	    $template{$can_choose} = ["1=1"] unless exists $template{$can_choose};
 	}
     }
@@ -203,7 +233,7 @@ push @startup, map ("$create $_", @vars);
 push @startup, map (defined($var{$_}) ? "*set $_ $var{$_}" : (), @vars);
 
 # finish code
-my $finish = defined($end_node) ? "*goto $end_node" : "*finish";
+my $finish = defined($end_node) && !$use_finish ? "*goto $end_node" : "*finish";
 
 # loop over sources
 for my $node_pos (0..$#node) {
@@ -212,7 +242,7 @@ for my $node_pos (0..$#node) {
     push @out, indent (0,
 		       $node_pos == 0 ? @startup : (),
 		       "",
-		       "*comment $node;",
+		       "*comment $node",
 		       $create_scene_files ? undef : "*label $node",
 		       $track_node_visits ? ("*set turns +1",
 					     "*set ${node}_visits +1",
@@ -222,18 +252,20 @@ for my $node_pos (0..$#node) {
 		       getAttr ($node_attr{$node}, $view_attr, "$node.text"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
-	my $is_auto = exists $template{"$node.auto"};
+	my $is_auto = exists $template{$node.$suffix{'auto'}};
 	push @out, "*choice" if !$is_auto;
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
-	    my $preview = getAttr ($attrs, $preview_attr, "$dest.prompt");
-	    my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
-	    my $can_preview = $preview =~ /^$name_regex$/ ? "$preview.show" : "$dest.show";
-	    my $can_choose = $choose =~ /^$name_regex$/ ? "$choose.allow" : "$dest.allow";
+	    my $preview_prefix = getAttr ($attrs, $preview_attr, $dest);
+	    my $choose_prefix = getAttr ($attrs, $choose_attr, $dest);
+	    my $preview = $preview_prefix . $suffix{'prompt'};
+	    my $choose = $choose_prefix . $suffix{'choose'};
+	    my $can_preview = $preview_prefix . $suffix{'show'};
+	    my $can_choose = $choose_prefix . $suffix{'allow'};
 	    my $conditional_preview = (exists($template{$can_choose}) ? "*selectable_if ( $can_choose ) " : "") . "# $preview";
 	    push @out, indent ($is_auto ? 0 : 2,
-			       $is_auto ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
+			       $is_auto ? () : "*comment $node -> $dest",  # suppress comments in *if...*elseif...*else blocks. Messy
 			       $is_auto
 			       ? ($n_choice==0 ? "*if $can_choose" : "*elseif $can_choose")
 			       : (exists($template{$can_preview})
@@ -248,15 +280,15 @@ for my $node_pos (0..$#node) {
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $preview = getAttr ($attrs, $preview_attr, undef);
-	my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
+	my $choose = getAttr ($attrs, $choose_attr, $dest) . $suffix{'choose'};
 	push @out, indent (0,
 			   "",
-			   "*comment $node -> $dest;",
+			   "*comment $node -> $dest",
 			   $preview,
 			   $choose,
 			   "$goto $dest",
 			   "");
-    } else {
+    } elsif ($node_pos != $#node) {
 	push @out, $finish, "";
     }
 
@@ -265,10 +297,11 @@ for my $node_pos (0..$#node) {
 
     # write output
     if ($create_scene_files) {
+	my $scene_filename = $node . $suffix{'txt'};
 	local *SCENE;
-	open SCENE, ">$node.txt" or die "Couldn't create $node.txt: $!";
+	open SCENE, ">$scene_filename" or die "Couldn't open $scene_filename: $!";
 	print SCENE map ("$_\n", @subst);
-	close SCENE or die "Couldn't write $node.txt: $!";
+	close SCENE or die "Couldn't close $scene_filename: $!";
     } else {
 	print map ("$_\n", @subst);
    }
@@ -310,7 +343,7 @@ sub substitute_templates {
 	    } else {
 		push @subst, $line;
 	    }
-	} elsif ($line =~ /^(\s*.*)\*include\s+(\S+)(.*)/) {
+	} elsif ($line =~ /^(\s*.*)$include_keyword_regex\s+(\S+)(.*)/) {
 	    my ($prelude, $filename, $rest) = ($1, $2, $3);
 	    local *INCL;
 	    open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
@@ -340,6 +373,7 @@ graph2choice.pl [options] <graph file>
     -man              full documentation
     -initial <name>   specify initial node
     -final <name>     specify final node
+    -finish           use *finish to exit scene
     -scenes           create scene files
     -track            track node visits
     -template <file>  use template defs file
@@ -361,14 +395,19 @@ Prints the manual page and exits.
 
 Specify the name of the initial node in the graph (i.e. where the choicescript scene begins).
 
-If no value is specified, the program will look for a node named 'start'.
+This node will appear first in the generated choicescript, leading to the intuitive behavior if the generated file is included by another file.
+
+If no value is specified, the program will look for a node with no incoming transitions.
 
 =item B<-final> name
 
 Specify the name of the final node in the graph.
 Instead of exiting the scene with *finish, the game will *goto this node.
 
-It is assumed that the *label for this node is defined elsewhere, e.g. in the template file, or by an externally including file.
+This node will appear last in the generated choicescript, leading to the intuitive behavior if the generated file is included by another file.
+
+If no value is specified, the program will look for a unique node with no outgoing transitions.
+If such a node is not found (or is not unique), the program will attempt to create a unique name.
 
 =item B<-scenes>
 
@@ -396,19 +435,25 @@ You can use the option multiple times to load multiple template definition files
 
 The format of each template definition file is as follows:
 
- *template label1
+ *template label1.text
  ChoiceScript goes here
  More ChoiceScript goes here
 
- *template label2
+ *template label2.text
  *if some_condition
    Something indented can go here
  Back to the original indent
 
- *template label3
+ *template label3.choose
+ You make your choice.
  ...
 
 This will substitute all instances of 'label1', 'label2' and 'label3' with the corresponding stanzas, using the appropriate indenting.
+
+Alternatively, instead of a template definitions file, a template directory will be used.
+In this case, rather than reading the definitions from one monolithic file,
+the program will look for text files in the template directory whose filenames are the template labels
+("label1.text", "label2.text", "label3.choose" in the above example).
 
 The following templates are created/checked automatically:
 
@@ -424,7 +469,9 @@ The following templates are created/checked automatically:
 
 The names 'NODE.prompt' and 'NODE.choose' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
 If these are overridden, e.g. to 'XXX' and 'YYY' (respectively),
-then the corresponding conditional template names are also implicitly changed:
+then instead of 'NODE.prompt' and 'NODE.choose',
+the templates 'XXX.prompt' and 'YYY.choose' will be used.
+The corresponding conditional template names are also implicitly changed:
 'NODE.show' is changed to 'XXX.show', and 'NODE.allow' to 'YYY.allow'.
 
 =item B<-stubs>
