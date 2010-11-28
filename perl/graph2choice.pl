@@ -167,7 +167,7 @@ unless ($keep_template_stubs) {
 }
 
 # create template regex
-my $template_regex = '\b(' . join('|',map(quotemeta(),keys(%template))) . '|\*include\s+' . $name_regex . ')\b';
+my $template_regex = '(' . join('|',map(quotemeta(),keys(%template))) . '|\*include\s+' . $name_regex . ')';
 
 # variables
 my %var;
