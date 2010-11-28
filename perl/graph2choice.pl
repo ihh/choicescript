@@ -5,8 +5,9 @@ use Graph::Easy;
 use Graph::Easy::Parser::Graphviz;
 use Pod::Usage;
 
-# file suffices
-my %suffix = map (($_=>".$_"), qw(top prompt choose text auto show allow txt));
+# template label prefixes & suffixes
+my %suffix = map (($_=>".$_"), qw(top bottom prompt choose text auto show allow txt));
+my $global_prefix = 'story';
 
 # keywords that extend ChoiceScript (sort of)
 my $template_keyword = "*template";
@@ -151,7 +152,7 @@ for my $dest (@node) {
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
-    : ($suffix{'top'} => [],
+    : (map (($global_prefix.$suffix{$_} => []), qw(top bottom)),
        defined($end_node) ? ($end_node.$suffix{'text'} => []) : (),
        map (($_.$suffix{'prompt'} => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
@@ -225,7 +226,7 @@ if ($track_node_visits) {
 }
 
 # startup code
-my @startup = (".top");
+my @startup = ($global_prefix.$suffix{'top'});
 # create variables
 my @vars = sort keys %var;
 my $create = $create_scene_files ? "*create" : "*temp";
@@ -249,7 +250,8 @@ for my $node_pos (0..$#node) {
 					     "*set visits ${node}_visits",
 					     '*set previous_node node',
 					     "*set node \"$node\""): (),
-		       getAttr ($node_attr{$node}, $view_attr, "$node.text"));
+		       getAttr ($node_attr{$node}, $view_attr, $node) . $suffix{'text'},
+		       $node_pos == $#node ? $global_prefix.$suffix{'bottom'} : ());
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
 	my $is_auto = exists $template{$node.$suffix{'auto'}};
@@ -457,13 +459,15 @@ the program will look for text files in the template directory whose filenames a
 
 The following templates are created/checked automatically:
 
-  .top           occurs once at the very beginning of the file
-  NODE.prompt    text displayed when NODE appears in a list of choice options
+  NODE.prompt    text displayed when NODE appears in a list of choice options (NODE = graphviz node label)
   NODE.choose    text displayed when NODE is selected, or is the only possible choice
   NODE.text      text displayed when NODE is visited
   NODE.auto      dummy template; if defined, NODE will use "*if NODE.allow -> NODE.choose" instead of "*choice -> #NODE.prompt -> NODE.choose"
   NODE.show      if defined, a ChoiceScript expression that must evaluate true for NODE to be visible in a list of choices
   NODE.allow     if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
+
+  story.top      occurs once at the very beginning of the file
+  story.bottom   occurs once at the very end of the file
 
   *include FILE  pastes in the contents of FILE
 
