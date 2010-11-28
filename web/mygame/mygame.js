@@ -21,6 +21,7 @@
 // Specify the list of scenes here, separated by commas, with no final comma
 
 nav = new SceneNavigator([
+    "rpg",
     "segue",
     "gepetto",
     "princess"
