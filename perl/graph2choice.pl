@@ -122,12 +122,12 @@ for my $dest (@node) {
 # initialize default templates
 my %template = $keep_template_stubs
     ? ()
-    : ('top_of_file' => [],
-       map (("preview_$_" => [$_]), @node),
+    : ('.top' => [],
+       map (("$_.prompt" => [$_]), @node),
        map (($_ => [$preview_destination{$_}]), keys %preview_destination),
-       map (("choose_$_" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
-       map (("choose_$_" => ["*page_break"]), @segue_node),
-       map (("view_$_" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
+       map (("$_.choose" => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
+       map (("$_.choose" => ["*page_break"]), @segue_node),
+       map (("$_.text" => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]), @node));
 
 # load templates
 for my $template_filename (@template_filename) {
@@ -154,20 +154,20 @@ while (my ($tmpl, $val) = each %template) {
 }
 
 # identify "auto" nodes and automatically create default can_choose_ templates if none exist
-my @auto_nodes = grep (exists($template{"auto_$_"}), @node);
+my @auto_nodes = grep (exists($template{"$_.auto"}), @node);
 unless ($keep_template_stubs) {
     for my $node (@auto_nodes) {
 	for my $dest_attrs (@{$choice{$node}}) {
 	    my ($dest, $attrs) = @$dest_attrs;
-	    my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
-	    my $can_choose = $choose =~ /^$name_regex$/ ? "can_$choose" : "can_choose_$dest";
+	    my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
+	    my $can_choose = $choose =~ /^$name_regex$/ ? "$choose.allow" : "$dest.allow";
 	    $template{$can_choose} = ["1=1"] unless exists $template{$can_choose};
 	}
     }
 }
 
 # create template regex
-my $template_regex = '\b(' . join('|',map(quotemeta(),keys(%template))) . '|include_' . $name_regex . ')\b';
+my $template_regex = '\b(' . join('|',map(quotemeta(),keys(%template))) . '|\*include\s+' . $name_regex . ')\b';
 
 # variables
 my %var;
@@ -181,7 +181,7 @@ if ($track_node_visits) {
 }
 
 # startup code
-my @startup = qw(top_of_file);
+my @startup = (".top");
 # create variables
 my @vars = sort keys %var;
 my $create = $create_scene_files ? "*create" : "*temp";
@@ -205,18 +205,18 @@ for my $node_pos (0..$#node) {
 					     "*set visits ${node}_visits",
 					     '*set previous_node node',
 					     "*set node \"$node\""): (),
-		       getAttr ($node_attr{$node}, $view_attr, "view_$node"));
+		       getAttr ($node_attr{$node}, $view_attr, "$node.text"));
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
-	my $is_auto = exists $template{"auto_$node"};
+	my $is_auto = exists $template{"$node.auto"};
 	push @out, "*choice" if !$is_auto;
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
-	    my $preview = getAttr ($attrs, $preview_attr, "preview_$dest");
-	    my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
-	    my $can_preview = $preview =~ /^$name_regex$/ ? "can_$preview" : "can_preview_$dest";
-	    my $can_choose = $choose =~ /^$name_regex$/ ? "can_$choose" : "can_choose_$dest";
+	    my $preview = getAttr ($attrs, $preview_attr, "$dest.prompt");
+	    my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
+	    my $can_preview = $preview =~ /^$name_regex$/ ? "$preview.show" : "$dest.show";
+	    my $can_choose = $choose =~ /^$name_regex$/ ? "$choose.allow" : "$dest.allow";
 	    my $conditional_preview = (exists($template{$can_choose}) ? "*selectable_if ( $can_choose ) " : "") . "# $preview";
 	    push @out, indent ($is_auto ? 0 : 2,
 			       $is_auto ? () : "*comment $node -> $dest;",  # suppress comments in *if...*elseif...*else blocks. Messy
@@ -234,7 +234,7 @@ for my $node_pos (0..$#node) {
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
 	my $preview = getAttr ($attrs, $preview_attr, undef);
-	my $choose = getAttr ($attrs, $choose_attr, "choose_$dest");
+	my $choose = getAttr ($attrs, $choose_attr, "$dest.choose");
 	push @out, indent (0,
 			   "",
 			   "*comment $node -> $dest;",
@@ -259,6 +259,9 @@ for my $node_pos (0..$#node) {
 	print map ("$_\n", @subst);
    }
 }
+
+# write a placeholder *goto_scene if we're creating scene files
+print "*goto_scene $node[0]\n" if $create_scene_files && @node;
 
 # and that's it
 exit;
@@ -377,8 +380,9 @@ For convenience, some other ChoiceScript variables are also set:
 =item B<-template> filename
 
 Substitute templates from a definitions file.
+You can use the option multiple times to load multiple template definition files.
 
-The format of the file is as follows:
+The format of each template definition file is as follows:
 
  *template label1
  ChoiceScript goes here
@@ -396,29 +400,25 @@ This will substitute all instances of 'label1', 'label2' and 'label3' with the c
 
 The following templates are created/checked automatically:
 
-  top_of_file       occurs once at the very beginning of the file
-  preview_NODE      text displayed when NODE appears in a list of choices
-  choose_NODE       text displayed when NODE is selected, or is the only possible choice
-  view_NODE         text displayed when NODE is visited
-  auto_NODE         dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
-  can_preview_NODE  if defined, a ChoiceScript expression that must evaluate true for NODE to appear in a list of choices
-  can_choose_NODE   if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
-  include_FILE      pastes in the contents of "FILE.include", automatically appending the line "*label finish_FILE"
+  .top           occurs once at the very beginning of the file
+  NODE.prompt    text displayed when NODE appears in a list of choice options
+  NODE.choose    text displayed when NODE is selected, or is the only possible choice
+  NODE.text      text displayed when NODE is visited
+  NODE.auto      dummy template; if defined, NODE will use "*if can_choose_NODE" instead of "*choice -> #preview_NODE -> choose_NODE"
+  NODE.show      if defined, a ChoiceScript expression that must evaluate true for NODE to be visible in a list of choices
+  NODE.allow     if defined, a ChoiceScript expression that must evaluate true for NODE to be selectable (vs grayed-out)
 
-The names 'preview_NODE' and 'choose_NODE' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
+  *include FILE  pastes in the contents of FILE
 
-Note that if the 'choose_NODE' template name is overridden (by specifying the 'label' edge attribute in the graphviz file), e.g. to XXX, then can_choose_NODE will become can_XXX.
-This only works if 'choose_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_choose_NODE' is kept.
-
-Similarly, if the 'preview_NODE' template name is overridden (by specifying the 'tooltip' edge attribute in the graphviz file), e.g. to YYY, then can_preview_NODE will become can_YYY.
-This only works if 'preview_NODE' is overridden to a string that is a valid template name (i.e. no whitespace, punctuation, etc); if not, the default value of 'can_preview_NODE' is kept.
-
-You can use this option multiple times to load multiple template definition files.
+The names 'NODE.prompt' and 'NODE.choose' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
+If these are overridden, e.g. to 'XXX' and 'YYY' (respectively),
+then the corresponding conditional template names are also implicitly changed:
+'NODE.show' is changed to 'XXX.show', and 'NODE.allow' to 'YYY.allow'.
 
 =item B<-stubs>
 
-Do not define the default templates (top_of_file, preview_NODE, choose_NODE, view_NODE).
-Instead leave them as stubs visible to the player.
+Do not define the default templates (.top, NODE.prompt, NODE.choose, NODE.text).
+Instead leave them as stubs visible to the play-tester.
 
 =back
 
