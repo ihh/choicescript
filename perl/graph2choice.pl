@@ -133,18 +133,32 @@ my %template = $keep_template_stubs
 for my $template_filename (@template_filename) {
     local *TMPL;
     local $_;
-    open TMPL, "<$template_filename" or die "Couldn't open template file '$template_filename': $!";
-    my $current_template;
-    while (<TMPL>) {
-	if (/^\s*\*template\s+($name_regex)\s*$/) {
-	    $current_template = $1;
-	    $template{$current_template} = [];
-	} elsif (defined $current_template) {
-	    chomp;
-	    push @{$template{$current_template}}, $_;
+    if (-d $template_filename) {
+	local *DIR;
+	opendir DIR, $template_filename or die "Couldn't open template directory '$template_filename': $!";
+	my @text_filename = grep (/^[^\.]/ && (-T "$template_filename/$_"), readdir (DIR));
+	closedir DIR;
+	for my $filename (@text_filename) {
+	    open TMPL, "<$template_filename/$filename" or die "Couldn't open template file '$template_filename/$filename': $!";
+	    my @tmpl = <TMPL>;
+	    close TMPL;
+	    grep (chomp, @tmpl);
+	    @{$template{$filename}} = \@tmpl;
 	}
+    } else {
+	open TMPL, "<$template_filename" or die "Couldn't open template file '$template_filename': $!";
+	my $current_template;
+	while (<TMPL>) {
+	    if (/^\s*\*template\s+($name_regex)\s*$/) {
+		$current_template = $1;
+		$template{$current_template} = [];
+	    } elsif (defined $current_template) {
+		chomp;
+		push @{$template{$current_template}}, $_;
+	    }
+	}
+	close TMPL;
     }
-    close TMPL;
 }
 # trim off empty lines at the end of templates
 while (my ($tmpl, $val) = each %template) {
@@ -167,7 +181,7 @@ unless ($keep_template_stubs) {
 }
 
 # create template regex
-my $template_regex = '(' . join('|',map(quotemeta(),keys(%template))) . '|\*include\s+' . $name_regex . ')';
+my $template_regex = '(' . join('|',map(quotemeta(),keys(%template))) . ')';
 
 # variables
 my %var;
@@ -290,21 +304,19 @@ sub substitute_templates {
 	my $line = shift @lines;
 	if ($line =~ /^(\s*.*)$template_regex(.*)$/) {
 	    my ($prelude, $tmpl, $rest) = ($1, $2, $3);
-	    my @tmpl;
-	    if ($tmpl =~ /^include_(\S+)/) {
-		my $prefix = $1;
-		my $filename = $prefix . $include_suffix;
-		local *INCL;
-		open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
-		@tmpl = <INCL>;
-		close INCL;
-		grep (chomp, @tmpl);
-		push @tmpl, "*label finish_$prefix";
-	    } elsif (defined $template{$tmpl}) {
-		@tmpl = @{$template{$tmpl}};
+	    if (defined $template{$tmpl}) {
+		my @tmpl = @{$template{$tmpl}};
+		unshift @lines, map ("$prelude$_$rest", @tmpl);
 	    } else {
 		push @subst, $line;
 	    }
+	} elsif ($line =~ /^(\s*.*)\*include\s+(\S+)(.*)/) {
+	    my ($prelude, $filename, $rest) = ($1, $2, $3);
+	    local *INCL;
+	    open INCL, "<$filename" or die "Couldn't open included filename $filename: $1";
+	    my @tmpl = <INCL>;
+	    close INCL;
+	    grep (chomp, @tmpl);
 	    unshift @lines, map ("$prelude$_$rest", @tmpl);
 	} else {
 	    push @subst, $line;
