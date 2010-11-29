@@ -212,7 +212,7 @@ unless ($keep_template_stubs) {
 }
 
 # create template regex
-my $template_regex = '(' . join('|',map(quotemeta(),keys(%template))) . ')';
+my $template_regex = '\b(' . join('|',map(quotemeta(),keys(%template))) . ')\b';
 
 # variables
 my %var;
