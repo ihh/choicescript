@@ -155,11 +155,9 @@ my %template = $keep_template_stubs
     ? ()
     : (map (($global_prefix.$suffix{$_} => []), qw(top bottom)),
        defined($end_node) ? ($end_node.$suffix{'text'} => []) : (),
-       map (($_.$suffix{'prompt'} => [$_]), @node),
-       map (($_.$suffix{'prompt'} => [$_]), keys %edge_label_dests),
-       map (($_.$suffix{'choose'} => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
+       map (($_.$suffix{'prompt'} => [$_]), @node, keys(%edge_label_dests)),
+       map (($_.$suffix{'choose'} => ["You choose " . $_ . ".", "*page_break"]), @choice_node, keys(%edge_label_dests)),
        map (($_.$suffix{'choose'} => ["*page_break"]), @segue_node),
-       map (($_.$suffix{'choose'} => [$_]), keys %edge_label_dests),
        map (($_.$suffix{'text'} => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]),
 	    @orig_node));
 
