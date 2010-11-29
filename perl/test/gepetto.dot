@@ -2,7 +2,7 @@ digraph G {
 	gepetto_the_toymaker_made_a -> { boy giant_robot };
 	boy -> ran_away [minlen=3];
 	ran_away -> all_alone;
-	boy -> gepetto_died [tooltip="stayed with Gepetto",minlen=1];
+	boy -> gepetto_died [label=stayed_with_gepetto,minlen=1];
 	gepetto_died -> all_alone;
 	giant_robot -> shunned_by_humans -> { lives_in_woods all_alone };
 	giant_robot -> accidentally_killed_someone -> { killed_a_stranger killed_gepetto } -> all_alone;

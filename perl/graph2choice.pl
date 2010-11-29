@@ -15,13 +15,13 @@ my $include_keyword = "*include";
 
 # regexes
 my $name_regex = '[A-Za-z_\.][A-Za-z_\.\d]*';
+my $notname_char_regex = '[^A-Za-z_\.\d]';
 my $template_keyword_regex = quotemeta $template_keyword;
 my $include_keyword_regex = quotemeta $include_keyword;
 
 # Graph::Easy node & edge attributes
-my $preview_attr = "title";  # edge attribute; graphviz 'tooltip' gets converted to Graph::Easy 'title'
-my $choose_attr = "label";  # edge attribute
-my $view_attr = "label";  # node attribute
+my $edge_label_attr = "label";  # edge attribute
+my $node_label_attr = "label";  # node attribute
 my $edge_sort_attr = "minlen";  # we use the 'minlen' attribute to sort edges; 'weight' would be preferable, but Graph::Easy ignores this for some reason
 
 # command-line options
@@ -118,11 +118,11 @@ unless ($use_finish) {
     }
 }
 
-# get all preview labels
-my %preview_destination;
+# get all edge labels & the set of nodes that each such edge label points to
+my %edge_label_dests;
 for my $src_dest_attr (@trans) {
-    my $preview = getAttr ($src_dest_attr->[2], $preview_attr, undef);
-    $preview_destination{$preview} = $src_dest_attr->[1] if defined $preview;
+    my $preview = getAttr ($src_dest_attr->[2], $edge_label_attr, undef);
+    push @{$edge_label_dests{$preview}}, $src_dest_attr->[1] if defined $preview;
 }
 
 # distinguish "segue" nodes (nodes whose predecessors all have only one outgoing transition, and so are not reached by a choice of the player) from "choice" nodes (nodes reached by a "choice" edge)
@@ -156,9 +156,10 @@ my %template = $keep_template_stubs
     : (map (($global_prefix.$suffix{$_} => []), qw(top bottom)),
        defined($end_node) ? ($end_node.$suffix{'text'} => []) : (),
        map (($_.$suffix{'prompt'} => [$_]), @node),
-       map (($_ => [$preview_destination{$_}]), keys %preview_destination),
+       map (($_.$suffix{'prompt'} => [$_]), keys %edge_label_dests),
        map (($_.$suffix{'choose'} => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
        map (($_.$suffix{'choose'} => ["*page_break"]), @segue_node),
+       map (($_.$suffix{'choose'} => [$_]), keys %edge_label_dests),
        map (($_.$suffix{'text'} => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]),
 	    @orig_node));
 
@@ -206,14 +207,14 @@ unless ($keep_template_stubs) {
     for my $node (@auto_nodes) {
 	for my $dest_attrs (@{$choice{$node}}) {
 	    my ($dest, $attrs) = @$dest_attrs;
-	    my $choose = getAttr ($attrs, $choose_attr, $dest) . $suffix{'allow'};
+	    my $choose = getAttr ($attrs, $edge_label_attr, $dest) . $suffix{'allow'};
 	    $template{$can_choose} = ["1=1"] unless exists $template{$can_choose};
 	}
     }
 }
 
 # create template regex
-my $template_regex = '\b(' . join('|',map(quotemeta(),keys(%template))) . ')\b';
+my $template_regex = join('|',map(quotemeta(),keys(%template)));
 
 # variables
 my %var;
@@ -251,7 +252,7 @@ for my $node_pos (0..$#node) {
 					     "*set visits ${node}_visits",
 					     '*set previous_node node',
 					     "*set node \"$node\""): (),
-		       getAttr ($node_attr{$node}, $view_attr, $node) . $suffix{'text'},
+		       getAttr ($node_attr{$node}, $node_label_attr, $node) . $suffix{'text'},
 		       $node_pos == $#node ? $global_prefix.$suffix{'bottom'} : ());
     my $goto = $create_scene_files ? "*goto_scene" : "*goto";
     if (defined $choice{$node} && @{$choice{$node}} > 1) {
@@ -260,15 +261,11 @@ for my $node_pos (0..$#node) {
 	my @choices = sort { getAttr($a->[1],$edge_sort_attr,0) <=> getAttr($b->[1],$edge_sort_attr,0) } @{$choice{$node}};
 	for (my $n_choice = 0; $n_choice < @choices; ++$n_choice) {
 	    my ($dest, $attrs) = @{$choices[$n_choice]};
-	    my $preview_prefix = getAttr ($attrs, $preview_attr, $dest);
-	    my $choose_prefix = getAttr ($attrs, $choose_attr, $dest);
-	    my $preview = $preview_prefix . $suffix{'prompt'};
-	    my $choose = $choose_prefix . $suffix{'choose'};
-	    my $can_preview = $preview_prefix . $suffix{'show'};
-	    my $can_choose = $choose_prefix . $suffix{'allow'};
+	    my $prefix = getAttr ($attrs, $edge_label_attr, $dest);
+	    my ($preview, $choose, $can_preview, $can_choose) = map ($prefix . $suffix{$_}, qw(prompt choose show allow));
 	    my $conditional_preview = (exists($template{$can_choose}) ? "*selectable_if ( $can_choose ) " : "") . "# $preview";
 	    push @out, indent ($is_auto ? 0 : 2,
-			       $is_auto ? () : "*comment $node -> $dest",  # suppress comments in *if...*elseif...*else blocks. Messy
+			       $is_auto ? () : "*comment $node -> $dest",  # suppress comments in *if...*elseif...*else blocks, as they make ChoiceScript choke. Messy
 			       $is_auto
 			       ? ($n_choice==0 ? "*if $can_choose" : "*elseif $can_choose")
 			       : (exists($template{$can_preview})
@@ -282,12 +279,10 @@ for my $node_pos (0..$#node) {
 	push @out, $is_auto ? ("*else", indent(2,$finish)) : "";
     } elsif (defined $choice{$node} && @{$choice{$node}} == 1) {
 	my ($dest, $attrs) = @{$choice{$node}->[0]};
-	my $preview = getAttr ($attrs, $preview_attr, undef);
-	my $choose = getAttr ($attrs, $choose_attr, $dest) . $suffix{'choose'};
+	my $choose = getAttr ($attrs, $edge_label_attr, $dest) . $suffix{'choose'};
 	push @out, indent (0,
 			   "",
 			   "*comment $node -> $dest",
-			   $preview,
 			   $choose,
 			   "$goto $dest",
 			   "");
@@ -338,7 +333,7 @@ sub substitute_templates {
     my @subst;
     while (@lines) {
 	my $line = shift @lines;
-	if ($line =~ /^(\s*.*)$template_regex(.*)$/) {
+	if ($line =~ /^(\s*.*)\b($template_regex)(|$notname_char_regex.*)$/) {
 	    my ($prelude, $tmpl, $rest) = ($1, $2, $3);
 	    if (defined $template{$tmpl}) {
 		my @tmpl = @{$template{$tmpl}};
@@ -472,12 +467,8 @@ The following templates are created/checked automatically:
 
   *include FILE  pastes in the contents of FILE
 
-The names 'NODE.prompt' and 'NODE.choose' can be overridden by specifying (respectively) the 'tooltip' and 'label' edge attributes in the graphviz file.
-If these are overridden, e.g. to 'XXX' and 'YYY' (respectively),
-then instead of 'NODE.prompt' and 'NODE.choose',
-the templates 'XXX.prompt' and 'YYY.choose' will be used.
-The corresponding conditional template names are also implicitly changed:
-'NODE.show' is changed to 'XXX.show', and 'NODE.allow' to 'YYY.allow'.
+The NODE in the edge-related templates ('NODE.prompt', 'NODE.choose', 'NODE.show' and 'NODE.allow')
+can be overridden by specifying the 'label' edge attribute in the graphviz file.
 
 =item B<-stubs>
 
