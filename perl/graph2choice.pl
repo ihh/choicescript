@@ -61,6 +61,7 @@ for my $node ($graph->nodes()) {
 }
 
 my @node = keys %node_attr;
+my @orig_node = @node;   # keep track of original node list (we may add a dummy end node later)
 
 my @trans;
 my %sources = map (($_ => []), @node);
@@ -159,7 +160,7 @@ my %template = $keep_template_stubs
        map (($_.$suffix{'choose'} => ["You choose " . $_ . ".", "*page_break"]), @choice_node),
        map (($_.$suffix{'choose'} => ["*page_break"]), @segue_node),
        map (($_.$suffix{'text'} => ["Currently: " . $_ . ($track_node_visits ? " (visit #\${visits}, turn #\${turns}, previously \${previous_node\})." : ".")]),
-	    defined($end_node) ? grep ($_ ne $end_node, @node) : @node));
+	    @orig_node));
 
 # load templates
 for my $template_filename (@template_filename) {
